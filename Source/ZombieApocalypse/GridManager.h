@@ -29,13 +29,16 @@ struct FGridCell
 {
     GENERATED_BODY()
  
-    UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    ECellState State = ECellState::Empty;
- 
-    bool IsWalkable() const
-    {
-        return State != ECellState::Zombie; // Example: Zombies block walkability, adjust as needed
-    }
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Occupants")
+    ECellState State = ECellState::Empty; // Anyone on the cell? - Might be redundant, remove later?
+
+    UPROPERTY(BlueprintReadWrite, Category = "Occupants")
+    bool bHasHuman = false; // For fast queries
+
+    UPROPERTY(BlueprintReadWrite, Category = "Occupants")
+    bool bAlreadyTarget = false; // use to make sure it does not get targeted by more zombies
+
+    bool HasSusceptible() const { return bHasHuman; } // function to check if there is a human here
 };
  
 USTRUCT()
@@ -69,6 +72,10 @@ public:
     
     AGridManager();
 
+    // Cell info
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid Visuals")
+    float CellSize = 100.f; // world units per cell
+
     // Flattened 2D grid using TArray
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     TArray<FGridCell> Grid;
@@ -83,21 +90,22 @@ public:
     // Index helpers for 2D access
     FORCEINLINE int32 GetGridIndex(int32 X, int32 Y) const { return X + Y * GridSize; }
     FORCEINLINE int32 GetHorizontalFenceIndex(int32 X, int32 Y) const { return X + Y * GridSize; }
-    FORCEINLINE int32 GetVerticalFenceIndex(int32 X, int32 Y) const { return X + Y * (GridSize + 1); }
+    FORCEINLINE int32 GetVerticalFenceIndex(int32 X, int32 Y) const { return X * GridSize + Y; }
 
     
     bool IsValidCell(int32 X, int32 Y) const;
  
-
     void PlaceFence(int32 CellX, int32 CellY, EEdgeDirection Edge);
  
-
     bool IsEdgeBlockedByFence(int32 X1, int32 Y1, int32 X2, int32 Y2) const;
  
-
     bool CanMoveBetweenCells(int32 FromX, int32 FromY, int32 ToX, int32 ToY) const;
  
     void GetNeighbors(const FGridNode& Node, TArray<FGridNode>& OutNeighbors) const;
  
     bool FindPath(const FGridNode& Start, const FGridNode& End, TArray<FGridNode>& OutPath) const;
+
+    FVector GetCellCenterWorldPos(int32 X, int32 Y) const;
+    FVector GetEdgeWorldPos(int32 EdgeX, int32 EdgeY, bool bIsHorizontal) const; //Snap point
+    EEdgeDirection GetEdgeDirectionFromMouse(FVector WorldLoc) const; // Player targeting
 };

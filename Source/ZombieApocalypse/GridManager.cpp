@@ -1,6 +1,6 @@
 #include "GridManager.h"
 #include "Containers/Queue.h"
- 
+
 AGridManager::AGridManager()
 {
     Grid.SetNum(GridSize * GridSize);
@@ -24,19 +24,19 @@ void AGridManager::PlaceFence(int32 CellX, int32 CellY, EEdgeDirection Edge)
     {
     case EEdgeDirection::Top:
         if (IsValidCell(CellX, CellY))
-            HorizontalFence[GetHorizontalFenceIndex(CellX, CellY)] = true;
+            HorizontalFence[GetHorizontalFenceIndex(CellX, CellY)] = true; // Top edge of THIS cell
         break;
     case EEdgeDirection::Bottom:
-        if (IsValidCell(CellX, CellY - 1))
-            HorizontalFence[GetHorizontalFenceIndex(CellX, CellY - 1)] = true;
+        if (IsValidCell(CellX, CellY) && CellY < GridSize-1)
+            HorizontalFence[GetHorizontalFenceIndex(CellX, CellY - 1)] = true; // Bottom = Top of cell below
         break;
     case EEdgeDirection::Left:
-        if (IsValidCell(CellX - 1, CellY))
-            VerticalFence[GetVerticalFenceIndex(CellX - 1, CellY)] = true;
+        if (IsValidCell(CellX, CellY) && CellX > 0)
+            VerticalFence[GetVerticalFenceIndex(CellX, CellY)] = true; // Left edge of THIS cell
         break;
     case EEdgeDirection::Right:
-        if (IsValidCell(CellX, CellY))
-            VerticalFence[GetVerticalFenceIndex(CellX, CellY)] = true;
+        if (IsValidCell(CellX, CellY) && CellX < GridSize-1)
+            VerticalFence[GetVerticalFenceIndex(CellX, CellY)] = true; // Right = Left of cell right
         break;
     }
 }
@@ -62,8 +62,7 @@ bool AGridManager::IsEdgeBlockedByFence(int32 X1, int32 Y1, int32 X2, int32 Y2) 
 bool AGridManager::CanMoveBetweenCells(int32 FromX, int32 FromY, int32 ToX, int32 ToY) const
 {
     return IsValidCell(ToX, ToY)
-        && !IsEdgeBlockedByFence(FromX, FromY, ToX, ToY)
-        && Grid[GetGridIndex(ToX, ToY)].IsWalkable();
+        && !IsEdgeBlockedByFence(FromX, FromY, ToX, ToY);
 }
 
 void AGridManager::GetNeighbors(const FGridNode& Node, TArray<FGridNode>& OutNeighbors) const
@@ -127,4 +126,38 @@ bool AGridManager::FindPath(const FGridNode& Start, const FGridNode& End, TArray
         }
     }
     return false;
+}
+
+FVector AGridManager::GetCellCenterWorldPos(int32 X, int32 Y) const
+{
+    return GetActorLocation() + FVector(X * CellSize + CellSize*0.5, Y * CellSize + CellSize*0.5f, 0.f);
+}
+
+FVector AGridManager::GetEdgeWorldPos(int32 EdgeX, int32 EdgeY, bool bIsHorizontal) const
+{
+    FVector Base = GetActorLocation();
+    if (bIsHorizontal)
+    {
+        return Base + FVector(EdgeX * CellSize + CellSize * 0.5f, EdgeY * CellSize, 0.f);
+    }
+    else
+    {
+        return Base + FVector(EdgeX * CellSize, EdgeY * CellSize + CellSize * 0.5f, 0.f);
+    }
+}
+
+EEdgeDirection AGridManager::GetEdgeDirectionFromMouse(FVector WorldLoc) const
+{
+    FVector Local = WorldLoc - GetActorLocation();
+    int32 SnapX = FMath::RoundToInt(Local.X / CellSize);
+    int32 SnapY = FMath::RoundToInt(Local.Y / CellSize);
+
+    // Check distance to 4 possible edges, return closest
+    float MinDist = MAX_FLT;
+    EEdgeDirection BestDir = EEdgeDirection::Top;
+
+
+    // Implement dist to each edge type
+    return BestDir;
+
 }
