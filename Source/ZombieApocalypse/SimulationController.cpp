@@ -6,11 +6,13 @@
 ASimulationController::ASimulationController()
 {
     PrimaryActorTick.bCanEverTick = true;
+    
 }
 
 void ASimulationController::BeginPlay()
 {
     Super::BeginPlay();
+    
 
     if (!PopulationDensityEffectTable)
     {
@@ -26,21 +28,27 @@ void ASimulationController::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
 
-    AccumulatedTime += DeltaTime;
-
-    // One full simulation day passed
-    if (AccumulatedTime >= SimulationStepTime)
+    if (TimeStepsFinished < 50)
     {
-        AccumulatedTime = 0.f;
-        PerformSimulationStep();
-
-        ++TimeStepsFinished;
-        if (bShouldDebug)
+        AccumulatedTime += DeltaTime;
+        // One full simulation day passed
+        if (AccumulatedTime >= SimulationStepTime)
         {
-            UE_LOG(LogTemp, Log, TEXT("Day %d | S:%.2f B:%.2f Z:%.2f"),
-                TimeStepsFinished, Susceptible, Bitten, Zombies);
+            AccumulatedTime = 0.f;
+            PerformSimulationStep();
+
+            ++TimeStepsFinished;
+            if (bShouldDebug)
+            {
+                UE_LOG(LogTemp, Log, TEXT("Day %d | S:%.2f B:%.2f Z:%.2f"),
+                    TimeStepsFinished, Susceptible, Bitten, Zombies);
+            }
         }
-    }  
+    }
+    else
+    {
+    UE_LOG(LogTemp, Log, TEXT("Humans:%.2f"), Susceptible);
+    }
 }
 
 // Function to read data from Unreal DataTable into the graphPts vector
