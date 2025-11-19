@@ -24,42 +24,40 @@ void AGridManager::PlaceFence(int32 CellX, int32 CellY, EEdgeDirection Edge)
         UE_LOG(LogTemp, Warning, TEXT("Placing fence on cell (%d,%d) -> %s"),
             CellX, CellY, *UEnum::GetValueAsString(Edge));
 
+    if (!IsValidCell(CellX, CellY)) return;
 
     switch (Edge)
     {
     case EEdgeDirection::Top:
-        if (IsValidCell(CellX, CellY))
-            HorizontalFence[GetHorizontalFenceIndex(CellX, CellY)] = true; // Top edge of THIS cell
+        HorizontalFence[GetHorizontalFenceIndex(CellX, CellY)] = true; // Top edge = line Y
         break;
+
     case EEdgeDirection::Bottom:
-        if (IsValidCell(CellX, CellY) && CellY < GridSize-1)
-            HorizontalFence[GetHorizontalFenceIndex(CellX, CellY - 1)] = true; // Bottom = Top of cell below
+        HorizontalFence[GetHorizontalFenceIndex(CellX, CellY + 1)] = true; // Bottom edge = line Y+1
         break;
+
     case EEdgeDirection::Left:
-        if (IsValidCell(CellX, CellY) && CellX > 0)
-            VerticalFence[GetVerticalFenceIndex(CellX, CellY)] = true; // Left edge of THIS cell
+        VerticalFence[GetVerticalFenceIndex(CellX, CellY)] = true; // Left edge = line X
         break;
+
     case EEdgeDirection::Right:
-        if (IsValidCell(CellX, CellY) && CellX < GridSize-1)
-            VerticalFence[GetVerticalFenceIndex(CellX, CellY)] = true; // Right = Left of cell right
+        VerticalFence[GetVerticalFenceIndex(CellX +1, CellY)] = true; // Right edge = line X+1
         break;
+
     }
 }
  
 bool AGridManager::IsEdgeBlockedByFence(int32 X1, int32 Y1, int32 X2, int32 Y2) const
 {
-    if (!IsValidCell(X1, Y1) || !IsValidCell(X2, Y2))
-        return true;
- 
-    if (X1 == X2)
+    if (X1 == X2) // Horizontal move 
     {
-        int32 MinY = FMath::Min(Y1, Y2);
-        return HorizontalFence[GetHorizontalFenceIndex(X1, MinY)];
+        int32 FenceY = FMath::Min(Y1, Y2);
+        return HorizontalFence[GetHorizontalFenceIndex(X1, FenceY)];
     }
     else if (Y1 == Y2)
     {
-        int32 MinX = FMath::Min(X1, X2);
-        return VerticalFence[GetVerticalFenceIndex(MinX, Y1)];
+        int32 FenceX = FMath::Min(X1, X2);
+        return VerticalFence[GetVerticalFenceIndex(FenceX, Y1)];
     }
     return true;
 }
