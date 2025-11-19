@@ -20,6 +20,11 @@ bool AGridManager::IsValidCell(int32 X, int32 Y) const
  
 void AGridManager::PlaceFence(int32 CellX, int32 CellY, EEdgeDirection Edge)
 {
+    if (bShouldDebug) // Logs in console
+        UE_LOG(LogTemp, Warning, TEXT("Placing fence on cell (%d,%d) -> %s"),
+            CellX, CellY, *UEnum::GetValueAsString(Edge));
+
+
     switch (Edge)
     {
     case EEdgeDirection::Top:
@@ -82,6 +87,9 @@ void AGridManager::GetNeighbors(const FGridNode& Node, TArray<FGridNode>& OutNei
 
 bool AGridManager::FindPath(const FGridNode& Start, const FGridNode& End, TArray<FGridNode>& OutPath) const
 {
+    UE_LOG(LogTemp, Warning, TEXT("FINDPATH: from (%d,%d) to (%d,%d)"),
+        Start.X, Start.Y, End.X, End.Y);
+
     if (!IsValidCell(Start.X, Start.Y) || !IsValidCell(End.X, End.Y))
         return false;
  
@@ -108,10 +116,10 @@ bool AGridManager::FindPath(const FGridNode& Start, const FGridNode& End, TArray
                 Node = CameFrom[Node];
             }
             OutPath.Insert(Start, 0);
- 
+            
             return true;
         }
- 
+
         TArray<FGridNode> Neighbors;
         GetNeighbors(Current, Neighbors);
  

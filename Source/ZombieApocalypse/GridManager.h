@@ -76,6 +76,9 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid Visuals")
     float CellSize = 100.f; // world units per cell
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
+    bool bShouldDebug = false;
+
     // Flattened 2D grid using TArray
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     TArray<FGridCell> Grid;
