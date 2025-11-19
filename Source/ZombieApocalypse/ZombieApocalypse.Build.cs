@@ -1,6 +1,7 @@
 // Copyright University of Inland Norway
 
 using UnrealBuildTool;
+using UnrealBuildTool.Rules;
 
 public class ZombieApocalypse : ModuleRules
 {
@@ -8,7 +9,7 @@ public class ZombieApocalypse : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 	
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore" });
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput" });
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
 

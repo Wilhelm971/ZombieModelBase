@@ -3,6 +3,7 @@
 #include "SimulationGameMode.h"
 #include "SimulationHUD.h"
 #include "TopDownPawn.h"
+#include "TopDownPlayerController.h"
 
 
 ASimulationGameMode::ASimulationGameMode()
