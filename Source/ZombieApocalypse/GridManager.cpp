@@ -1,0 +1,130 @@
+#include "GridManager.h"
+#include "Containers/Queue.h"
+ 
+AGridManager::AGridManager()
+{
+    Grid.SetNum(GridSize * GridSize);
+    for (int32 i = 0; i < Grid.Num(); ++i)
+    {
+        Grid[i].State = ECellState::Empty;
+    }
+ 
+    HorizontalFence.Init(false, GridSize * (GridSize + 1));
+    VerticalFence.Init(false, (GridSize + 1) * GridSize);
+}
+ 
+bool AGridManager::IsValidCell(int32 X, int32 Y) const
+{
+    return X >= 0 && X < GridSize && Y >= 0 && Y < GridSize;
+}
+ 
+void AGridManager::PlaceFence(int32 CellX, int32 CellY, EEdgeDirection Edge)
+{
+    switch (Edge)
+    {
+    case EEdgeDirection::Top:
+        if (IsValidCell(CellX, CellY))
+            HorizontalFence[GetHorizontalFenceIndex(CellX, CellY)] = true;
+        break;
+    case EEdgeDirection::Bottom:
+        if (IsValidCell(CellX, CellY - 1))
+            HorizontalFence[GetHorizontalFenceIndex(CellX, CellY - 1)] = true;
+        break;
+    case EEdgeDirection::Left:
+        if (IsValidCell(CellX - 1, CellY))
+            VerticalFence[GetVerticalFenceIndex(CellX - 1, CellY)] = true;
+        break;
+    case EEdgeDirection::Right:
+        if (IsValidCell(CellX, CellY))
+            VerticalFence[GetVerticalFenceIndex(CellX, CellY)] = true;
+        break;
+    }
+}
+ 
+bool AGridManager::IsEdgeBlockedByFence(int32 X1, int32 Y1, int32 X2, int32 Y2) const
+{
+    if (!IsValidCell(X1, Y1) || !IsValidCell(X2, Y2))
+        return true;
+ 
+    if (X1 == X2)
+    {
+        int32 MinY = FMath::Min(Y1, Y2);
+        return HorizontalFence[GetHorizontalFenceIndex(X1, MinY)];
+    }
+    else if (Y1 == Y2)
+    {
+        int32 MinX = FMath::Min(X1, X2);
+        return VerticalFence[GetVerticalFenceIndex(MinX, Y1)];
+    }
+    return true;
+}
+
+bool AGridManager::CanMoveBetweenCells(int32 FromX, int32 FromY, int32 ToX, int32 ToY) const
+{
+    return IsValidCell(ToX, ToY)
+        && !IsEdgeBlockedByFence(FromX, FromY, ToX, ToY)
+        && Grid[GetGridIndex(ToX, ToY)].IsWalkable();
+}
+
+void AGridManager::GetNeighbors(const FGridNode& Node, TArray<FGridNode>& OutNeighbors) const
+{
+    static const int32 Dx[4] = { -1, 1, 0, 0 };
+    static const int32 Dy[4] = { 0, 0, -1, 1 };
+ 
+    for (int32 i = 0; i < 4; ++i)
+    {
+        int32 Nx = Node.X + Dx[i];
+        int32 Ny = Node.Y + Dy[i];
+        if (CanMoveBetweenCells(Node.X, Node.Y, Nx, Ny))
+            OutNeighbors.Add(FGridNode(Nx, Ny));
+    }
+}
+
+
+bool AGridManager::FindPath(const FGridNode& Start, const FGridNode& End, TArray<FGridNode>& OutPath) const
+{
+    if (!IsValidCell(Start.X, Start.Y) || !IsValidCell(End.X, End.Y))
+        return false;
+ 
+    TMap<FGridNode, FGridNode> CameFrom;
+    TQueue<FGridNode> Queue;
+    TSet<FGridNode> Visited;
+ 
+    Queue.Enqueue(Start);
+    Visited.Add(Start);
+ 
+    while (!Queue.IsEmpty())
+    {
+        FGridNode Current;
+        Queue.Dequeue(Current);
+ 
+        if (Current == End)
+        {
+            OutPath.Empty();
+ 
+            FGridNode Node = End;
+            while (!(Node == Start))
+            {
+                OutPath.Insert(Node, 0);
+                Node = CameFrom[Node];
+            }
+            OutPath.Insert(Start, 0);
+ 
+            return true;
+        }
+ 
+        TArray<FGridNode> Neighbors;
+        GetNeighbors(Current, Neighbors);
+ 
+        for (const FGridNode& Neighbor : Neighbors)
+        {
+            if (!Visited.Contains(Neighbor))
+            {
+                Queue.Enqueue(Neighbor);
+                Visited.Add(Neighbor);
+                CameFrom.Add(Neighbor, Current);
+            }
+        }
+    }
+    return false;
+}
