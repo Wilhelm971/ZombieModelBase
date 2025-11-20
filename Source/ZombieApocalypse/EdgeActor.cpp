@@ -1,27 +1,49 @@
 // Copyright University of Inland Norway
-
-
 #include "EdgeActor.h"
+#include "Components/PrimitiveComponent.h"
+#include "SimulationController.h"
+#include "Kismet/GameplayStatics.h"
 
-// Sets default values
 AEdgeActor::AEdgeActor()
 {
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
+    EdgeMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("EdgeMesh"));
+    RootComponent = EdgeMesh;
+    EdgeMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+    EdgeMesh->SetCollisionResponseToAllChannels(ECR_Block);
+    EdgeMesh->SetGenerateOverlapEvents(true);
 
+    // Make clickable
+    EdgeMesh->OnClicked.AddDynamic(this, &AEdgeActor::OnClicked);
 }
 
-// Called when the game starts or when spawned
 void AEdgeActor::BeginPlay()
 {
-	Super::BeginPlay();
-	
+    Super::BeginPlay();
+
+    // Set initial material
+    if (UnfencedMaterial)
+    {
+        EdgeMesh->SetMaterial(0, UnfencedMaterial);
+    }
 }
 
-// Called every frame
-void AEdgeActor::Tick(float DeltaTime)
+void AEdgeActor::OnClicked(UPrimitiveComponent* TouchedComponent, FKey ButtonPressed)
 {
-	Super::Tick(DeltaTime);
+    if (bIsFenced) return;  // Already fenced
 
+    // Find SimulationController and place fence
+    ASimulationController* Controller = Cast<ASimulationController>(UGameplayStatics::GetActorOfClass(GetWorld(), ASimulationController::StaticClass()));
+    if (Controller && EdgeID != -1)
+    {
+        Controller->PlaceFence(EdgeID);
+        bIsFenced = true;
+
+        // Update visual
+        if (FencedMaterial)
+        {
+            EdgeMesh->SetMaterial(0, FencedMaterial);
+        }
+
+        UE_LOG(LogTemp, Log, TEXT("Fence placed on EdgeID: %d"), EdgeID);
+    }
 }
-

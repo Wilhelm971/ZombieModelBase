@@ -1,8 +1,9 @@
 // Copyright University of Inland Norway
 
 #include "SimulationController.h"
-#include "EdgeActor.h"
 #include <cmath>
+#include "EdgeActor.h"  // Include if using AEdgeActor
+#include "CellActor.h"
 
 ASimulationController::ASimulationController()
 {
@@ -34,6 +35,11 @@ void ASimulationController::BeginPlay()
 
     // Spawn the grid
     SpawnGrid();
+
+    CellActors.Reserve(GridSizeX * GridSizeY);
+
+    // Initialize fenced edges
+    FencedEdges.Init(false, MaxEdges);
 }
 
 void ASimulationController::Tick(float DeltaTime)
@@ -167,6 +173,8 @@ void ASimulationController::AdvanceOneDay()
     {
         UE_LOG(LogTemp, Warning, TEXT("Outbreak contained!"));
     }
+
+    UpdateCellVisuals();
 }
 
 float ASimulationController::GraphLookup(float X) const
@@ -180,9 +188,9 @@ float ASimulationController::GraphLookup(float X) const
     {
         if (X <= graphPts[i].first)
         {
-            float x0 = graphPts[i-1].first;
+            float x0 = graphPts[i - 1].first;
             float x1 = graphPts[i].first;
-            float y0 = graphPts[i-1].second;
+            float y0 = graphPts[i - 1].second;
             float y1 = graphPts[i].second;
             float t = (X - x0) / (x1 - x0);
             return y0 + t * (y1 - y0);
@@ -218,7 +226,7 @@ void ASimulationController::UpdateContainmentEffect()
 
 void ASimulationController::SpawnGrid()
 {
-    if (!EdgeActorClass) 
+    if (!EdgeActorClass)
     {
         UE_LOG(LogTemp, Error, TEXT("EdgeActorClass not assigned!"));
         return;
@@ -258,6 +266,50 @@ void ASimulationController::SpawnGrid()
                 NewEdge->EdgeID = EdgeCounter++;
                 NewEdge->SetActorScale3D(FVector(0.1f, CellSpacing / 100.f, 0.1f));  // Scale to fit
             }
+        }
+    }
+
+    // Spawn cells at centers
+    for (int32 Y = 0; Y < GridSizeY; ++Y)
+    {
+        for (int32 X = 0; X < GridSizeX; ++X)
+        {
+            FVector Location = BaseLocation + FVector((X + 0.5f) * CellSpacing, (Y + 0.5f) * CellSpacing, 0.f);
+            FRotator Rotation(0.f, 0.f, 0.f);
+
+            ACellActor* NewCell = GetWorld()->SpawnActor<ACellActor>(CellActorClass, Location, Rotation);
+            if (NewCell)
+            {
+                NewCell->CellIndex = Y * GridSizeX + X;
+                NewCell->SetActorScale3D(FVector(1.0f, 1.0f, 1.0f));  // Adjust as needed
+                CellActors.Add(NewCell);
+            }
+        }
+    }
+}
+
+
+void ASimulationController::UpdateCellVisuals()
+{
+    if (CellActors.IsEmpty()) return;
+
+    // Simple uniform distribution: average per cell
+    int32 NumCells = CellActors.Num();
+    float AvgSusceptible = CurrentSusceptible / NumCells;
+    float AvgBitten = CurrentBitten / NumCells;
+    float AvgZombies = CurrentZombies / NumCells;
+
+    // Normalize scales (assume max pop per cell = initial susceptible / num_cells + buffer)
+    float MaxPopPerCell = InitialSusceptible / NumCells * 2.0f;  // Arbitrary max for scaling
+    float HumanScale = AvgSusceptible / MaxPopPerCell;
+    float BittenScale = AvgBitten / MaxPopPerCell;
+    float ZombieScale = AvgZombies / MaxPopPerCell;
+
+    for (ACellActor* Cell : CellActors)
+    {
+        if (Cell)
+        {
+            Cell->SetPopulationScales(HumanScale, BittenScale, ZombieScale);
         }
     }
 }

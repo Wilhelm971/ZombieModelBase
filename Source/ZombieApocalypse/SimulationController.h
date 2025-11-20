@@ -9,7 +9,6 @@
 #include "SimulationController.generated.h"
 
 
-
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnDayAdvanced, int32, Day);
 
 
@@ -119,10 +118,7 @@ public:
     // Simple grid for fences (e.g., 10x10 square grid, edges between cells)
     // For demo: assume 100 edges, track which are fenced
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Containment")
-    int32 MaxEdges = 100;
-
-protected:
-    virtual void BeginPlay() override;
+    int32 MaxEdges = 0;
 
     // Grid settings
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid")
@@ -135,10 +131,24 @@ protected:
     float CellSpacing = 100.f;  // Distance between cells
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid")
-    TSubclassOf<AEdgeActor> EdgeActorClass;  // Assign in Editor
+    TSubclassOf<class AEdgeActor> EdgeActorClass;  // Assign in Editor
 
     // Spawn grid function
     void SpawnGrid();
+
+
+    // Cell actor class for visuals
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Grid")
+    TSubclassOf<class ACellActor> CellActorClass;  // Assign in Editor
+
+    // Array of spawned cell actors
+    TArray<ACellActor*> CellActors;
+
+    // Update visuals after simulation step
+    void UpdateCellVisuals();
+
+protected:
+    virtual void BeginPlay() override;
 
 private:
     // GRAPH points: population_density_effect_on_zombie_bites

@@ -88,7 +88,7 @@ public:
     
     bool IsValidCell(int32 X, int32 Y) const;
  
-    UPROPERTY(EditAnywhere, BlueprintCallable)
+    
     void PlaceFence(int32 CellX, int32 CellY, EEdgeDirection Edge);
  
 

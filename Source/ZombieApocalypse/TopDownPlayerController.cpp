@@ -4,8 +4,10 @@
 #include "TopDownPlayerController.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "SimulationController.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "Kismet/GameplayStatics.h"
 
 ATopDownPlayerController::ATopDownPlayerController()
 {
@@ -43,6 +45,9 @@ void ATopDownPlayerController::SetupInputComponent()
 
 		if (ZoomAction)
 			EnhancedInput->BindAction(ZoomAction, ETriggerEvent::Triggered, this, &ATopDownPlayerController::HandleZoom);
+
+		if (NextDayAction)
+			EnhancedInput->BindAction(NextDayAction, ETriggerEvent::Completed, this, &ATopDownPlayerController::HandleDays);
 		
 	}
 }
@@ -82,4 +87,13 @@ void ATopDownPlayerController::HandleZoom(const FInputActionValue& Value)
 
 	TargetArmLength -= ZoomValue * ZoomSpeed * GetWorld()->GetDeltaSeconds();
 	TargetArmLength = FMath::Clamp(TargetArmLength, MinZoom, MaxZoom);
+}
+
+void ATopDownPlayerController::HandleDays(const FInputActionValue& Value)
+{
+	SimulationController = Cast<ASimulationController>(UGameplayStatics::GetActorOfClass(GetWorld(), ASimulationController::StaticClass()));
+	if (SimulationController)
+	{
+		SimulationController->AdvanceOneDay();
+	}
 }
