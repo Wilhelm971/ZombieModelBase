@@ -1,169 +1,263 @@
 // Copyright University of Inland Norway
 
 #include "SimulationController.h"
-#include "Math/UnrealMathUtility.h"
+#include "EdgeActor.h"
+#include <cmath>
 
 ASimulationController::ASimulationController()
 {
-    PrimaryActorTick.bCanEverTick = true;
-    
+    PrimaryActorTick.bCanEverTick = false; // Turn-based, no need for Tick
+
+    // Initialize live stocks
+    CurrentSusceptible = InitialSusceptible;
+    CurrentZombies = InitialZombies;
 }
 
 void ASimulationController::BeginPlay()
 {
     Super::BeginPlay();
-    
 
+    // Checking if the DataTable is assigned
     if (!PopulationDensityEffectTable)
     {
-          UE_LOG(LogTemp, Error, TEXT("PopulationDensityEffectTable is not assigned!"));
+        UE_LOG(LogTemp, Error, TEXT("PopulationDensityEffectTable is not assigned!"));
     }
     else
     {
-       ReadDataFromTableToVectors();
+        // Table found, read data into vector
+        ReadDataFromTableToVectors();
     }
+
+    // Calculate max edges: For NxM cells, horizontal edges = (N+1)*M, vertical = N*(M+1)
+    MaxEdges = (GridSizeX + 1) * GridSizeY + GridSizeX * (GridSizeY + 1);
+    FencedEdges.Init(false, MaxEdges);
+
+    // Spawn the grid
+    SpawnGrid();
 }
 
 void ASimulationController::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
+    // No auto-ticking; player-driven
+}
 
-    if (TimeStepsFinished < 50)
+void ASimulationController::ReadDataFromTableToVectors()
+{
+    if (bShouldDebug)
+        UE_LOG(LogTemp, Log, TEXT("Read Data From Table To Vectors"));
+
+    TArray<FName> RowNames = PopulationDensityEffectTable->GetRowNames();
+
+    for (int i = 0; i < RowNames.Num(); i++)
     {
-        AccumulatedTime += DeltaTime;
-        // One full simulation day passed
-        if (AccumulatedTime >= SimulationStepTime)
-        {
-            AccumulatedTime = 0.f;
-            PerformSimulationStep();
+        if (bShouldDebug)
+            UE_LOG(LogTemp, Log, TEXT("Reading table row index: %d"), i);
 
-            ++TimeStepsFinished;
+        FPopulationDensityEffect* RowData = PopulationDensityEffectTable->FindRow<FPopulationDensityEffect>(RowNames[i], TEXT(""));
+        if (RowData)
+        {
+            graphPts.Add(std::make_pair(RowData->PopulationDensity, RowData->NormalPopulationDensity));
+
             if (bShouldDebug)
             {
-                UE_LOG(LogTemp, Log, TEXT("Day %d | S:%.2f B:%.2f Z:%.2f"),
-                    TimeStepsFinished, Susceptible, Bitten, Zombies);
+                auto LastPair = graphPts.Last();
+                UE_LOG(LogTemp, Warning, TEXT("Reading table row: %d, pair: (%f, %f)"), i, LastPair.first, LastPair.second);
             }
         }
-    }
-    else
-    {
-    UE_LOG(LogTemp, Log, TEXT("Humans:%.2f"), Susceptible);
     }
 }
 
-// Function to read data from Unreal DataTable into the graphPts vector
-void ASimulationController::ReadDataFromTableToVectors()
+void ASimulationController::AdvanceOneDay()
 {
-    if (bShouldDebug) UE_LOG(LogTemp, Log, TEXT("ReadDataFromTableToVectors"));
+    CurrentDay++;
 
-    const TArray<FName> RowNames = PopulationDensityEffectTable->GetRowNames();
-
-    for (int32 Idx = 0; Idx < RowNames.Num(); ++Idx)
+    // 1. Calculate current totals
+    CurrentBitten = 0.f;
+    for (const FConveyorBatch& Batch : BittenConveyor)
     {
-        const FPopulationDensityEffect* Row = PopulationDensityEffectTable->FindRow<FPopulationDensityEffect>(RowNames[Idx], TEXT(""));
-        if (Row)
-        {
-            graphPts.emplace_back(Row->PopulationDensity, Row->NormalPopulationDensity);
+        CurrentBitten += Batch.AmountOfPeople;
+    }
 
-            if (bShouldDebug)
-            {
-                const auto& P = graphPts.back();
-                UE_LOG(LogTemp, Warning, TEXT("Row %d -> (%.3f , %.3f)"), Idx, P.first, P.second);
-            }
+    float NonZombiePopulation = CurrentSusceptible + CurrentBitten;
+    float PopulationDensity = NonZombiePopulation / LandArea;
+    float DensityRatio = PopulationDensity / NormalPopulationDensity;
+
+    float DensityEffect = GraphLookup(DensityRatio);
+    float BiteRatePerZombie = NormalBiteRate * DensityEffect * ContainmentEffectMultiplier;
+    float PotentialBites = CurrentZombies * BiteRatePerZombie;
+    float TotalBites = FMath::RoundToFloat(PotentialBites);
+
+    float Denominator = FMath::Max(NonZombiePopulation, 1.0f);
+    float BitesOnSusceptible = FMath::RoundToFloat((CurrentSusceptible / Denominator) * TotalBites);
+
+    float GettingBitten = FMath::Min(BitesOnSusceptible, CurrentSusceptible);
+
+    if (bShouldDebug)
+    {
+        UE_LOG(LogTemp, Log, TEXT("Day %d: Biting %f susceptible"), CurrentDay, GettingBitten);
+    }
+
+    // 2. Advance conveyor age
+    for (FConveyorBatch& Batch : BittenConveyor)
+    {
+        Batch.RemainingDays -= 1.0f;
+    }
+
+    // 3. Outflow → new zombies
+    float BecomingZombies = 0.f;
+    TArray<FConveyorBatch> SurvivingBatches;
+    SurvivingBatches.Reserve(BittenConveyor.Num());
+
+    for (const FConveyorBatch& Batch : BittenConveyor)
+    {
+        if (Batch.RemainingDays <= 0.f)
+        {
+            BecomingZombies += Batch.AmountOfPeople;
+        }
+        else
+        {
+            SurvivingBatches.Add(Batch);
         }
     }
-}   
+    BittenConveyor = SurvivingBatches;
+
+    // 4. Inflow (capacity limited)
+    float CapacityUsed = 0.f;
+    for (const FConveyorBatch& Batch : BittenConveyor)
+    {
+        CapacityUsed += Batch.AmountOfPeople;
+    }
+    float FreeCapacity = FMath::Max(0.f, BittenCapacity - CapacityUsed);
+    float ActualInflow = FMath::Min(GettingBitten, FreeCapacity);
+
+    if (ActualInflow > 0.f)
+    {
+        FConveyorBatch NewBatch;
+        NewBatch.AmountOfPeople = ActualInflow;
+        NewBatch.RemainingDays = DaysToBecomeZombie;
+        BittenConveyor.Add(NewBatch);
+    }
+
+    // 5. Update stocks
+    CurrentSusceptible = FMath::Max(0.f, CurrentSusceptible - GettingBitten);
+    CurrentZombies += BecomingZombies;
+
+    // Update bitten for next time
+    CurrentBitten = 0.f;
+    for (const FConveyorBatch& Batch : BittenConveyor)
+    {
+        CurrentBitten += Batch.AmountOfPeople;
+    }
+
+    if (bShouldDebug)
+    {
+        UE_LOG(LogTemp, Log, TEXT("Day %d: S=%f, B=%f, Z=%f"), CurrentDay, CurrentSusceptible, CurrentBitten, CurrentZombies);
+    }
+
+    // Broadcast for HUD/UI
+    OnDayAdvanced.Broadcast(CurrentDay);
+
+    // Check win/lose (optional)
+    if (CurrentSusceptible <= 0)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Humanity lost!"));
+    }
+    else if (CurrentZombies <= 0)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Outbreak contained!"));
+    }
+}
 
 float ASimulationController::GraphLookup(float X) const
 {
-    if (graphPts.front().first) return 0.f;
+    if (graphPts.IsEmpty()) return 1.0f;
 
-    if (X <= graphPts.front().first)    return graphPts.front().second;
-    if (X >= graphPts.back().first)     return graphPts.back().second;
+    if (X <= graphPts[0].first) return graphPts[0].second;
+    if (X >= graphPts.Last().first) return graphPts.Last().second;
 
-    for (size_t i = 1; i < graphPts.size(); ++i)
+    for (int i = 1; i < graphPts.Num(); ++i)
     {
         if (X <= graphPts[i].first)
         {
-            const float x0 = graphPts[i - 1].first;
-            const float x1 = graphPts[i].first;
-            const float y0 = graphPts[i - 1].second;
-            const float y1 = graphPts[i].second;
-            const float t = (X - x0) / (x1 - x0);
+            float x0 = graphPts[i-1].first;
+            float x1 = graphPts[i].first;
+            float y0 = graphPts[i-1].second;
+            float y1 = graphPts[i].second;
+            float t = (X - x0) / (x1 - x0);
             return y0 + t * (y1 - y0);
         }
     }
-
-    return graphPts.back().second;
+    return graphPts.Last().second;
 }
 
-float ASimulationController::ConveyorContent() const
+void ASimulationController::PlaceFence(int32 EdgeID)
 {
-    float Sum = 0.f;
-    for (const FConveyorBatch& Batch : Conveyor)
-        Sum += Batch.AmountOfPeople;
-    return Sum;
+    if (EdgeID >= 0 && EdgeID < MaxEdges)
+    {
+        FencedEdges[EdgeID] = true;
+        UpdateContainmentEffect();
+        if (bShouldDebug)
+        {
+            UE_LOG(LogTemp, Log, TEXT("Fence placed on edge %d. Containment: %f"), EdgeID, ContainmentEffectMultiplier);
+        }
+    }
 }
 
-void ASimulationController::PerformSimulationStep()
+void ASimulationController::UpdateContainmentEffect()
 {
-    // 1. - Update bitten
-    Bitten = ConveyorContent();
-
-    // 2. - Auxiliaries
-    const float NonZombiePopulation = Bitten + Susceptible;
-    const float PopulationDensity   = NonZombiePopulation / LandArea;
-    const float X                   = PopulationDensity / NormalPopulationDensity;
-
-    const float DensityEffect = GraphLookup(X);
-    const float BitesPerZombieDay = NormalNumberOfBites * DensityEffect;
-    
-    const float TotalBittenPerDay = FMath::RoundToFloat(Zombies * BitesPerZombieDay);
-
-    const float Denom = FMath::Max(NonZombiePopulation, 1.f);
-    const float BitesOnSusceptible = FMath::RoundToFloat((Susceptible / Denom) * TotalBittenPerDay);
-
-    // 3. - Getting bitten
-    float GettingBitten = FMath::Min(BitesOnSusceptible, FMath::FloorToFloat(Susceptible));
-
-    // 4. - CONVEYOR MECHANICS
-    // 4.1 - Advance every batch
-    for (FConveyorBatch& Batch : Conveyor)
+    int32 NumFenced = 0;
+    for (int32 i = 0; i < MaxEdges; ++i)
     {
-        Batch.RemainingDays -= 1.f;
+        if (FencedEdges[i]) NumFenced++;
+    }
+    // Simple linear: each fence reduces by 0.01, min 0.5
+    float Reduction = static_cast<float>(NumFenced) / MaxEdges;
+    ContainmentEffectMultiplier = FMath::Clamp(1.0f - Reduction, 0.5f, 1.0f);
+}
+
+void ASimulationController::SpawnGrid()
+{
+    if (!EdgeActorClass) 
+    {
+        UE_LOG(LogTemp, Error, TEXT("EdgeActorClass not assigned!"));
+        return;
     }
 
-    // 4.2 - Separate finished batches -> raw outflow
-    std::vector<FConveyorBatch> NextConveyor;
-    NextConveyor.reserve(Conveyor.size());
+    int32 EdgeCounter = 0;
+    FVector BaseLocation = GetActorLocation();  // Spawn relative to controller
 
-    float RawOutflowPeople = 0.f;
-    for (FConveyorBatch& Batch : Conveyor)
+    // Spawn horizontal edges
+    for (int32 Y = 0; Y <= GridSizeY; ++Y)
     {
-        if (Batch.RemainingDays <= 0.f)
-            RawOutflowPeople += Batch.AmountOfPeople;
-        else
-            NextConveyor.push_back(MoveTemp(Batch));
-    }
-    
-    Conveyor.swap(NextConveyor);
+        for (int32 X = 0; X < GridSizeX; ++X)
+        {
+            FVector Location = BaseLocation + FVector(X * CellSpacing, Y * CellSpacing, 0.f);
+            FRotator Rotation(0.f, 0.f, 0.f);  // Horizontal
 
-    // 4.3 - inflow
-    const float CurrentContent = ConveyorContent();
-    const float FreeCapacity = FMath::Max(0.f, BittenCapacity - CurrentContent);
-    const float InflowPeople = FMath::Max(0.f, FMath::Min(GettingBitten, FreeCapacity));
-
-    if (InflowPeople > 0.f)
-    {
-        Conveyor.push_back({ InflowPeople, DaysToBecomeInfectedFromBite });
+            AEdgeActor* NewEdge = GetWorld()->SpawnActor<AEdgeActor>(EdgeActorClass, Location, Rotation);
+            if (NewEdge)
+            {
+                NewEdge->EdgeID = EdgeCounter++;
+                NewEdge->SetActorScale3D(FVector(CellSpacing / 100.f, 0.1f, 0.1f));  // Scale to fit cell
+            }
+        }
     }
 
-    // 4.4 - Outflow -> New Zombie
-    const float BecomingInfected = RawOutflowPeople;
+    // Spawn vertical edges
+    for (int32 Y = 0; Y < GridSizeY; ++Y)
+    {
+        for (int32 X = 0; X <= GridSizeX; ++X)
+        {
+            FVector Location = BaseLocation + FVector(X * CellSpacing, Y * CellSpacing, 0.f);
+            FRotator Rotation(0.f, 90.f, 0.f);  // Vertical
 
-    // 5 - STOCK UPDATES
-    Susceptible = FMath::Max(0.f, Susceptible - GettingBitten);
-    Zombies = FMath::Max(0.f, Zombies + BecomingInfected);
-
-    Bitten = ConveyorContent();
+            AEdgeActor* NewEdge = GetWorld()->SpawnActor<AEdgeActor>(EdgeActorClass, Location, Rotation);
+            if (NewEdge)
+            {
+                NewEdge->EdgeID = EdgeCounter++;
+                NewEdge->SetActorScale3D(FVector(0.1f, CellSpacing / 100.f, 0.1f));  // Scale to fit
+            }
+        }
+    }
 }

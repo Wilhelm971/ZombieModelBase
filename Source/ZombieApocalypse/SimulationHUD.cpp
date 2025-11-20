@@ -1,46 +1,46 @@
 // Copyright University of Inland Norway
 
-
 #include "SimulationHUD.h"
 #include "Kismet/GameplayStatics.h"
-#include "SimulationController.h"
+#include "SimulationController.h"  // Include for new vars
 
 void ASimulationHUD::BeginPlay()
 {
-	Super::BeginPlay();
+    Super::BeginPlay();
     SimulationController = Cast<ASimulationController>(UGameplayStatics::GetActorOfClass(GetWorld(), ASimulationController::StaticClass()));
 
     if (!SimulationController)
     {
         UE_LOG(LogTemp, Warning, TEXT("SimulationHUD: SimulationController not found!"));
     }
-    UE_LOG(LogTemp, Warning, TEXT("SimulationHUD: SimulationController found!"));
+    else
+    {
+        UE_LOG(LogTemp, Log, TEXT("SimulationHUD: SimulationController found!"));
+    }
 }
 
 void ASimulationHUD::DrawHUD()
 {
-	Super::DrawHUD();
+    Super::DrawHUD();
 
-    FVector2D screenPosition(50.0f, 50.0f); // X, Y position on screen
-    FLinearColor textColor = FLinearColor::White;
-    float textScale = 2.f;
+    if (!SimulationController) return;  // Safety check
 
-    //FString message = FString::Printf(TEXT("Day: %d, Humans: %f, Bitten: %f, Zombies: %f"),
-		//SimulationController->timeStepsFinished,
-        //SimulationController->Susceptible,
-        //SimulationController->Bitten,
-        //SimulationController->Zombies);
+    FVector2D ScreenPosition(50.0f, 50.0f);
+    FLinearColor TextColor = FLinearColor::White;
+    float TextScale = 2.0f;
 
-    //DrawText(message, textColor, screenPosition.X, screenPosition.Y, nullptr, textScale, true);
+    // Updated to new variable names!
+    FString DayMessage = FString::Printf(TEXT("Day: %d"), SimulationController->CurrentDay);
+    FString HumansMessage = FString::Printf(TEXT("Humans: %d"), (int)SimulationController->CurrentSusceptible);
+    FString BittenMessage = FString::Printf(TEXT("Bitten: %d"), (int)SimulationController->GetCurrentBitten());
+    FString ZombiesMessage = FString::Printf(TEXT("Zombies: %d"), (int)SimulationController->CurrentZombies);
 
-    // Multiple lines for better organization
-    FString stepMessage = FString::Printf(TEXT("Day: %d"), SimulationController->TimeStepsFinished);
-    FString humansMessage = FString::Printf(TEXT("Humans: %d"), (int)SimulationController->Susceptible);
-    FString bittenMessage = FString::Printf(TEXT("Bitten: %d"), (int)SimulationController->Bitten);
-    FString zombiesMessage = FString::Printf(TEXT("Zombies: %d"), (int)SimulationController->Zombies);
+    // Bonus: Containment info
+    FString ContainmentMessage = FString::Printf(TEXT("Containment: %.1f%%"), (1.0f - SimulationController->ContainmentEffectMultiplier) * 100.f);
 
-    DrawText(stepMessage, textColor, screenPosition.X, screenPosition.Y, nullptr, textScale, true);
-    DrawText(humansMessage, textColor, screenPosition.X, screenPosition.Y + 15.0f, nullptr, textScale, true);
-    DrawText(bittenMessage, textColor, screenPosition.X, screenPosition.Y + 30.0f, nullptr, textScale, true);
-    DrawText(zombiesMessage, textColor, screenPosition.X, screenPosition.Y + 45.0f, nullptr, textScale, true);
+    DrawText(DayMessage, TextColor, ScreenPosition.X, ScreenPosition.Y, nullptr, TextScale, true);
+    DrawText(HumansMessage, TextColor, ScreenPosition.X, ScreenPosition.Y + 20.0f, nullptr, TextScale, true);
+    DrawText(BittenMessage, TextColor, ScreenPosition.X, ScreenPosition.Y + 40.0f, nullptr, TextScale, true);
+    DrawText(ZombiesMessage, TextColor, ScreenPosition.X, ScreenPosition.Y + 60.0f, nullptr, TextScale, true);
+    DrawText(ContainmentMessage, TextColor, ScreenPosition.X, ScreenPosition.Y + 80.0f, nullptr, TextScale * 0.8f, true);
 }
