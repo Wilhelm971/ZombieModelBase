@@ -37,8 +37,10 @@ public:
 	/** Handles camera zoom input. */
 	void HandleZoom(const FInputActionValue& Value);
 
-	// temp
-	void TestPath();
+	void HandleDays(const FInputActionValue& Value);
+
+
+	class ASimulationController* SimulationController;
 
 	/** Cached reference to the controlled pawn (camera pawn). */
 	APawn* ControlledPawn;
@@ -56,11 +58,8 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Enhanced Input")
 	UInputAction* ZoomAction;
 
-	// temp
 	UPROPERTY(EditDefaultsOnly, Category = "Enhanced Input")
-	UInputAction* TestPathAction;
-
-
+	UInputAction* NextDayAction;
 
 
 
