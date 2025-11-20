@@ -28,7 +28,7 @@ void ASimulationController::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
 
-    if (TimeStepsFinished < 50)
+    if (TimeStepsFinished < 100)
     {
         AccumulatedTime += DeltaTime;
         // One full simulation day passed
@@ -44,10 +44,6 @@ void ASimulationController::Tick(float DeltaTime)
                     TimeStepsFinished, Susceptible, Bitten, Zombies);
             }
         }
-    }
-    else
-    {
-    UE_LOG(LogTemp, Log, TEXT("Humans:%.2f"), Susceptible);
     }
 }
 

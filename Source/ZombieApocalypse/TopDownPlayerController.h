@@ -37,6 +37,8 @@ public:
 	/** Handles camera zoom input. */
 	void HandleZoom(const FInputActionValue& Value);
 
+	// temp
+	void TestPath();
 
 	/** Cached reference to the controlled pawn (camera pawn). */
 	APawn* ControlledPawn;
@@ -53,6 +55,11 @@ public:
 	/** Input action for camera zooming. */
 	UPROPERTY(EditDefaultsOnly, Category = "Enhanced Input")
 	UInputAction* ZoomAction;
+
+	// temp
+	UPROPERTY(EditDefaultsOnly, Category = "Enhanced Input")
+	UInputAction* TestPathAction;
+
 
 
 
