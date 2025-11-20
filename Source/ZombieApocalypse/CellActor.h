@@ -15,15 +15,9 @@ class ZOMBIEAPOCALYPSE_API ACellActor : public AActor
 public:
 	ACellActor();
 
-	// Population visualization meshes (stacked cylinders)
+	// Single population visualization mesh
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Visuals")
-	UStaticMeshComponent* HumanComp;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Visuals")
-	UStaticMeshComponent* BittenComp;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Visuals")
-	UStaticMeshComponent* ZombieComp;
+	UStaticMeshComponent* PopulationComp;
 
 	// Unique cell index
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Grid")
@@ -31,21 +25,21 @@ public:
 
 	// Materials for each population type (assign in Blueprint)
 	UPROPERTY(EditDefaultsOnly, Category = "Materials")
-	UMaterialInterface* HumanMaterial;
+	UMaterialInterface* HumanMaterial;  // Green
 
 	UPROPERTY(EditDefaultsOnly, Category = "Materials")
-	UMaterialInterface* BittenMaterial;
+	UMaterialInterface* BittenMaterial;  // Yellow
 
 	UPROPERTY(EditDefaultsOnly, Category = "Materials")
-	UMaterialInterface* ZombieMaterial;
+	UMaterialInterface* ZombieMaterial;  // Red
 
-	// Set population scales (0-1 normalized)
+	// Set the dominant population color and scale
 	UFUNCTION(BlueprintCallable, Category = "Visuals")
-	void SetPopulationScales(float HumanScale, float BittenScale, float ZombieScale);
+	void SetDominantPopulation(float HumanAmount, float BittenAmount, float ZombieAmount);
 
 protected:
 	virtual void BeginPlay() override;
 
 private:
-	float MaxLayerHeight = 5.0f;
+	float MaxHeight = 10.0f;  // Max scale height for full population
 };

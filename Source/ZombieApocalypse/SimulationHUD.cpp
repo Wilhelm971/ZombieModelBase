@@ -31,16 +31,12 @@ void ASimulationHUD::DrawHUD()
 
     // Updated to new variable names!
     FString DayMessage = FString::Printf(TEXT("Day: %d"), SimulationController->CurrentDay);
-    FString HumansMessage = FString::Printf(TEXT("Humans: %d"), (int)SimulationController->CurrentSusceptible);
-    FString BittenMessage = FString::Printf(TEXT("Bitten: %d"), (int)SimulationController->GetCurrentBitten());
-    FString ZombiesMessage = FString::Printf(TEXT("Zombies: %d"), (int)SimulationController->CurrentZombies);
-
-    // Bonus: Containment info
-    FString ContainmentMessage = FString::Printf(TEXT("Containment: %.1f%%"), (1.0f - SimulationController->ContainmentEffectMultiplier) * 100.f);
+    FString HumansMessage = FString::Printf(TEXT("Humans: %d"), SimulationController->CurrentHumans);
+    FString BittenMessage = FString::Printf(TEXT("Bitten: %f"), SimulationController->GetCurrentBitten());
+    FString ZombiesMessage = FString::Printf(TEXT("Zombies: %d"), SimulationController->CurrentZombies);
 
     DrawText(DayMessage, TextColor, ScreenPosition.X, ScreenPosition.Y, nullptr, TextScale, true);
     DrawText(HumansMessage, TextColor, ScreenPosition.X, ScreenPosition.Y + 20.0f, nullptr, TextScale, true);
     DrawText(BittenMessage, TextColor, ScreenPosition.X, ScreenPosition.Y + 40.0f, nullptr, TextScale, true);
     DrawText(ZombiesMessage, TextColor, ScreenPosition.X, ScreenPosition.Y + 60.0f, nullptr, TextScale, true);
-    DrawText(ContainmentMessage, TextColor, ScreenPosition.X, ScreenPosition.Y + 80.0f, nullptr, TextScale * 0.8f, true);
 }

@@ -1,45 +1,76 @@
 // Copyright University of Inland Norway
 
 #include "SimulationController.h"
-#include <cmath>
-#include "EdgeActor.h"  // Include if using AEdgeActor
-#include "CellActor.h"
 
 ASimulationController::ASimulationController()
 {
     PrimaryActorTick.bCanEverTick = false; // Turn-based, no need for Tick
 
-    // Initialize live stocks
-    CurrentSusceptible = InitialSusceptible;
-    CurrentZombies = InitialZombies;
+    // Directions
+    Directions = {
+        {0, 1}, {0, -1}, {1, 0}, {-1, 0}
+    };
 }
 
 void ASimulationController::BeginPlay()
 {
     Super::BeginPlay();
 
-    // Checking if the DataTable is assigned
+    // Checking if the DataTable is assigned (kept if needed)
     if (!PopulationDensityEffectTable)
     {
         UE_LOG(LogTemp, Error, TEXT("PopulationDensityEffectTable is not assigned!"));
     }
     else
     {
-        // Table found, read data into vector
         ReadDataFromTableToVectors();
     }
 
-    // Calculate max edges: For NxM cells, horizontal edges = (N+1)*M, vertical = N*(M+1)
-    MaxEdges = (GridSizeX + 1) * GridSizeY + GridSizeX * (GridSizeY + 1);
+    // Calculate max edges
+    MaxEdges = (GridSizeY + 1) * GridSizeX + GridSizeY * (GridSizeX + 1);
     FencedEdges.Init(false, MaxEdges);
 
     // Spawn the grid
     SpawnGrid();
 
-    CellActors.Reserve(GridSizeX * GridSizeY);
+    // Initialize grid occupants
+    GridOccupants.SetNum(GridSizeY);
+    for (int32 Y = 0; Y < GridSizeY; ++Y)
+    {
+        GridOccupants[Y].Init(ECellType::Empty, GridSizeX);
+    }
 
-    // Initialize fenced edges
-    FencedEdges.Init(false, MaxEdges);
+    // Place initial humans and zombie randomly on empty cells
+    TArray<FCellPos> AllCells;
+    for (int32 Y = 0; Y < GridSizeY; ++Y)
+    {
+        for (int32 X = 0; X < GridSizeX; ++X)
+        {
+            AllCells.Add({X, Y});
+        }
+    }
+
+    // Shuffle for random placement
+    for (int32 i = AllCells.Num() - 1; i > 0; --i)
+    {
+        int32 j = FMath::RandRange(0, i);
+        Swap(AllCells[i], AllCells[j]);
+    }
+
+    // Place humans
+    for (int32 i = 0; i < InitialHumans && i < AllCells.Num(); ++i)
+    {
+        FCellPos Pos = AllCells[i];
+        GridOccupants[Pos.Y][Pos.X] = ECellType::Human;
+    }
+
+    // Place zombie (overwrite if on human, but since extra cells, place on empty)
+    FCellPos ZombiePos = GetRandomEmptyCell();
+    GridOccupants[ZombiePos.Y][ZombiePos.X] = ECellType::Zombie;
+
+    // Initial totals and visuals
+    ComputeTotals();
+    UpdateCellVisuals();
 }
 
 void ASimulationController::Tick(float DeltaTime)
@@ -78,94 +109,119 @@ void ASimulationController::AdvanceOneDay()
 {
     CurrentDay++;
 
-    // 1. Calculate current totals
-    CurrentBitten = 0.f;
-    for (const FConveyorBatch& Batch : BittenConveyor)
+    // Collect all zombie positions
+    TArray<FCellPos> ZombiePositions;
+    for (int32 Y = 0; Y < GridSizeY; ++Y)
     {
-        CurrentBitten += Batch.AmountOfPeople;
+        for (int32 X = 0; X < GridSizeX; ++X)
+        {
+            if (GridOccupants[Y][X] == ECellType::Zombie)
+            {
+                ZombiePositions.Add({X, Y});
+            }
+        }
     }
 
-    float NonZombiePopulation = CurrentSusceptible + CurrentBitten;
-    float PopulationDensity = NonZombiePopulation / LandArea;
-    float DensityRatio = PopulationDensity / NormalPopulationDensity;
+    // Movement phase: Each zombie moves toward closest human
+    TArray<FCellPos> HumanPositions = GetHumanPositions();
+    for (const FCellPos& ZombiePos : ZombiePositions)
+    {
+        if (HumanPositions.IsEmpty()) continue;
 
-    float DensityEffect = GraphLookup(DensityRatio);
-    float BiteRatePerZombie = NormalBiteRate * DensityEffect * ContainmentEffectMultiplier;
-    float PotentialBites = CurrentZombies * BiteRatePerZombie;
-    float TotalBites = FMath::RoundToFloat(PotentialBites);
+        // Find closest human (Manhattan distance for approximation)
+        FCellPos ClosestHuman;
+        float MinDist = MAX_flt;
+        for (const FCellPos& HumanPos : HumanPositions)
+        {
+            float Dist = FMath::Abs(ZombiePos.X - HumanPos.X) + FMath::Abs(ZombiePos.Y - HumanPos.Y);
+            if (Dist < MinDist)
+            {
+                MinDist = Dist;
+                ClosestHuman = HumanPos;
+            }
+        }
 
-    float Denominator = FMath::Max(NonZombiePopulation, 1.0f);
-    float BitesOnSusceptible = FMath::RoundToFloat((CurrentSusceptible / Denominator) * TotalBites);
+        // Get path to closest human
+        TArray<FCellPos> Path = FindPathBFS(ZombiePos, ClosestHuman);
+        if (Path.Num() > 1)  // At least one step
+        {
+            FCellPos NextPos = Path[1];  // First step
+            if (GridOccupants[NextPos.Y][NextPos.X] == ECellType::Empty)
+            {
+                // Move
+                GridOccupants[ZombiePos.Y][ZombiePos.X] = ECellType::Empty;
+                GridOccupants[NextPos.Y][NextPos.X] = ECellType::Zombie;
+            }
+        }
+    }
 
-    float GettingBitten = FMath::Min(BitesOnSusceptible, CurrentSusceptible);
+    // Biting phase: Zombies bite adjacent or same cell humans
+    ZombiePositions.Empty();
+    for (int32 Y = 0; Y < GridSizeY; ++Y)
+    {
+        for (int32 X = 0; X < GridSizeX; ++X)
+        {
+            if (GridOccupants[Y][X] == ECellType::Zombie)
+            {
+                ZombiePositions.Add({X, Y});
+            }
+        }
+    }
+
+    for (const FCellPos& ZombiePos : ZombiePositions)
+    {
+        // Check same cell (if moved onto human, but since move only to empty, check adjacent
+        for (const FNeighbor& Dir : Directions)
+        {
+            int32 NX = ZombiePos.X + Dir.DX;
+            int32 NY = ZombiePos.Y + Dir.DY;
+            if (NX >= 0 && NX < GridSizeX && NY >= 0 && NY < GridSizeY)
+            {
+                if (GridOccupants[NY][NX] == ECellType::Human && !IsEdgeFencedBetweenCells(ZombiePos.X, ZombiePos.Y, NX, NY))
+                {
+                    // Bite
+                    GridOccupants[NY][NX] = ECellType::Empty;
+                    FBitten NewBitten;
+                    NewBitten.RemainingDays = DaysToBecomeZombie;
+                    Bitten.Add(NewBitten);
+                    break;  // One bite per zombie per turn
+                }
+            }
+        }
+    }
+
+    // Age bitten
+    for (FBitten& Bit : Bitten)
+    {
+        Bit.RemainingDays -= 1;
+    }
+
+    // Transform to zombie on empty cell
+    for (int32 i = Bitten.Num() - 1; i >= 0; --i)
+    {
+        if (Bitten[i].RemainingDays <= 0)
+        {
+            FCellPos EmptyPos = GetRandomEmptyCell();
+            if (EmptyPos.X != -1)
+            {
+                GridOccupants[EmptyPos.Y][EmptyPos.X] = ECellType::Zombie;
+            }
+            Bitten.RemoveAt(i);
+        }
+    }
+
+    // Totals and visuals
+    ComputeTotals();
+    UpdateCellVisuals();
 
     if (bShouldDebug)
     {
-        UE_LOG(LogTemp, Log, TEXT("Day %d: Biting %f susceptible"), CurrentDay, GettingBitten);
+        UE_LOG(LogTemp, Log, TEXT("Day %d: H=%d, B=%d, Z=%d"), CurrentDay, CurrentHumans, Bitten.Num(), CurrentZombies);
     }
 
-    // 2. Advance conveyor age
-    for (FConveyorBatch& Batch : BittenConveyor)
-    {
-        Batch.RemainingDays -= 1.0f;
-    }
-
-    // 3. Outflow → new zombies
-    float BecomingZombies = 0.f;
-    TArray<FConveyorBatch> SurvivingBatches;
-    SurvivingBatches.Reserve(BittenConveyor.Num());
-
-    for (const FConveyorBatch& Batch : BittenConveyor)
-    {
-        if (Batch.RemainingDays <= 0.f)
-        {
-            BecomingZombies += Batch.AmountOfPeople;
-        }
-        else
-        {
-            SurvivingBatches.Add(Batch);
-        }
-    }
-    BittenConveyor = SurvivingBatches;
-
-    // 4. Inflow (capacity limited)
-    float CapacityUsed = 0.f;
-    for (const FConveyorBatch& Batch : BittenConveyor)
-    {
-        CapacityUsed += Batch.AmountOfPeople;
-    }
-    float FreeCapacity = FMath::Max(0.f, BittenCapacity - CapacityUsed);
-    float ActualInflow = FMath::Min(GettingBitten, FreeCapacity);
-
-    if (ActualInflow > 0.f)
-    {
-        FConveyorBatch NewBatch;
-        NewBatch.AmountOfPeople = ActualInflow;
-        NewBatch.RemainingDays = DaysToBecomeZombie;
-        BittenConveyor.Add(NewBatch);
-    }
-
-    // 5. Update stocks
-    CurrentSusceptible = FMath::Max(0.f, CurrentSusceptible - GettingBitten);
-    CurrentZombies += BecomingZombies;
-
-    // Update bitten for next time
-    CurrentBitten = 0.f;
-    for (const FConveyorBatch& Batch : BittenConveyor)
-    {
-        CurrentBitten += Batch.AmountOfPeople;
-    }
-
-    if (bShouldDebug)
-    {
-        UE_LOG(LogTemp, Log, TEXT("Day %d: S=%f, B=%f, Z=%f"), CurrentDay, CurrentSusceptible, CurrentBitten, CurrentZombies);
-    }
-
-    // Broadcast for HUD/UI
     OnDayAdvanced.Broadcast(CurrentDay);
 
-    // Check win/lose (optional)
-    if (CurrentSusceptible <= 0)
+    if (CurrentHumans <= 0)
     {
         UE_LOG(LogTemp, Warning, TEXT("Humanity lost!"));
     }
@@ -173,30 +229,6 @@ void ASimulationController::AdvanceOneDay()
     {
         UE_LOG(LogTemp, Warning, TEXT("Outbreak contained!"));
     }
-
-    UpdateCellVisuals();
-}
-
-float ASimulationController::GraphLookup(float X) const
-{
-    if (graphPts.IsEmpty()) return 1.0f;
-
-    if (X <= graphPts[0].first) return graphPts[0].second;
-    if (X >= graphPts.Last().first) return graphPts.Last().second;
-
-    for (int i = 1; i < graphPts.Num(); ++i)
-    {
-        if (X <= graphPts[i].first)
-        {
-            float x0 = graphPts[i - 1].first;
-            float x1 = graphPts[i].first;
-            float y0 = graphPts[i - 1].second;
-            float y1 = graphPts[i].second;
-            float t = (X - x0) / (x1 - x0);
-            return y0 + t * (y1 - y0);
-        }
-    }
-    return graphPts.Last().second;
 }
 
 void ASimulationController::PlaceFence(int32 EdgeID)
@@ -204,36 +236,24 @@ void ASimulationController::PlaceFence(int32 EdgeID)
     if (EdgeID >= 0 && EdgeID < MaxEdges)
     {
         FencedEdges[EdgeID] = true;
-        UpdateContainmentEffect();
         if (bShouldDebug)
         {
-            UE_LOG(LogTemp, Log, TEXT("Fence placed on edge %d. Containment: %f"), EdgeID, ContainmentEffectMultiplier);
+            UE_LOG(LogTemp, Log, TEXT("Fence placed on edge %d"), EdgeID);
         }
     }
 }
 
-void ASimulationController::UpdateContainmentEffect()
-{
-    int32 NumFenced = 0;
-    for (int32 i = 0; i < MaxEdges; ++i)
-    {
-        if (FencedEdges[i]) NumFenced++;
-    }
-    // Simple linear: each fence reduces by 0.01, min 0.5
-    float Reduction = static_cast<float>(NumFenced) / MaxEdges;
-    ContainmentEffectMultiplier = FMath::Clamp(1.0f - Reduction, 0.5f, 1.0f);
-}
-
 void ASimulationController::SpawnGrid()
 {
-    if (!EdgeActorClass)
+    if (!EdgeActorClass || !CellActorClass) 
     {
-        UE_LOG(LogTemp, Error, TEXT("EdgeActorClass not assigned!"));
+        UE_LOG(LogTemp, Error, TEXT("EdgeActorClass or CellActorClass not assigned!"));
         return;
     }
 
     int32 EdgeCounter = 0;
-    FVector BaseLocation = GetActorLocation();  // Spawn relative to controller
+    FVector BaseLocation = GetActorLocation();
+    CellActors.Reserve(GridSizeX * GridSizeY);
 
     // Spawn horizontal edges
     for (int32 Y = 0; Y <= GridSizeY; ++Y)
@@ -241,13 +261,13 @@ void ASimulationController::SpawnGrid()
         for (int32 X = 0; X < GridSizeX; ++X)
         {
             FVector Location = BaseLocation + FVector(X * CellSpacing, Y * CellSpacing, 0.f);
-            FRotator Rotation(0.f, 0.f, 0.f);  // Horizontal
+            FRotator Rotation(0.f, 0.f, 0.f);
 
             AEdgeActor* NewEdge = GetWorld()->SpawnActor<AEdgeActor>(EdgeActorClass, Location, Rotation);
             if (NewEdge)
             {
                 NewEdge->EdgeID = EdgeCounter++;
-                NewEdge->SetActorScale3D(FVector(CellSpacing / 100.f, 0.1f, 0.1f));  // Scale to fit cell
+                NewEdge->SetActorScale3D(FVector(CellSpacing / 100.f, 0.1f, 0.1f));
             }
         }
     }
@@ -258,13 +278,13 @@ void ASimulationController::SpawnGrid()
         for (int32 X = 0; X <= GridSizeX; ++X)
         {
             FVector Location = BaseLocation + FVector(X * CellSpacing, Y * CellSpacing, 0.f);
-            FRotator Rotation(0.f, 90.f, 0.f);  // Vertical
+            FRotator Rotation(0.f, 90.f, 0.f);
 
             AEdgeActor* NewEdge = GetWorld()->SpawnActor<AEdgeActor>(EdgeActorClass, Location, Rotation);
             if (NewEdge)
             {
                 NewEdge->EdgeID = EdgeCounter++;
-                NewEdge->SetActorScale3D(FVector(0.1f, CellSpacing / 100.f, 0.1f));  // Scale to fit
+                NewEdge->SetActorScale3D(FVector(0.1f, CellSpacing / 100.f, 0.1f));
             }
         }
     }
@@ -281,35 +301,149 @@ void ASimulationController::SpawnGrid()
             if (NewCell)
             {
                 NewCell->CellIndex = Y * GridSizeX + X;
-                NewCell->SetActorScale3D(FVector(1.0f, 1.0f, 1.0f));  // Adjust as needed
                 CellActors.Add(NewCell);
             }
         }
     }
 }
 
+void ASimulationController::ComputeTotals()
+{
+    CurrentHumans = 0;
+    CurrentZombies = 0;
+
+    for (int32 Y = 0; Y < GridSizeY; ++Y)
+    {
+        for (int32 X = 0; X < GridSizeX; ++X)
+        {
+            if (GridOccupants[Y][X] == ECellType::Human)
+            {
+                CurrentHumans++;
+            }
+            else if (GridOccupants[Y][X] == ECellType::Zombie)
+            {
+                CurrentZombies++;
+            }
+        }
+    }
+}
 
 void ASimulationController::UpdateCellVisuals()
 {
     if (CellActors.IsEmpty()) return;
 
-    // Simple uniform distribution: average per cell
-    int32 NumCells = CellActors.Num();
-    float AvgSusceptible = CurrentSusceptible / NumCells;
-    float AvgBitten = CurrentBitten / NumCells;
-    float AvgZombies = CurrentZombies / NumCells;
-
-    // Normalize scales (assume max pop per cell = initial susceptible / num_cells + buffer)
-    float MaxPopPerCell = InitialSusceptible / NumCells * 2.0f;  // Arbitrary max for scaling
-    float HumanScale = AvgSusceptible / MaxPopPerCell;
-    float BittenScale = AvgBitten / MaxPopPerCell;
-    float ZombieScale = AvgZombies / MaxPopPerCell;
-
-    for (ACellActor* Cell : CellActors)
+    for (int32 Index = 0; Index < CellActors.Num(); ++Index)
     {
-        if (Cell)
+        ACellActor* Cell = CellActors[Index];
+        if (!Cell) continue;
+
+        int32 X = Index % GridSizeX;
+        int32 Y = Index / GridSizeX;
+
+        float LocalSus = (GridOccupants[Y][X] == ECellType::Human) ? 1.f : 0.f;
+        float LocalBitten = 0.f;  // Bitten off-map
+        float LocalZom = (GridOccupants[Y][X] == ECellType::Zombie) ? 1.f : 0.f;
+
+        Cell->SetDominantPopulation(LocalSus, LocalBitten, LocalZom);
+    }
+}
+
+bool ASimulationController::IsEdgeFencedBetweenCells(int32 X1, int32 Y1, int32 X2, int32 Y2)
+{
+    int32 DX = X2 - X1;
+    int32 DY = Y2 - Y1;
+    int32 EdgeID = -1;
+
+    if (DY != 0)  // Horizontal edge
+    {
+        int32 EdgeY = FMath::Min(Y1, Y2);
+        int32 EdgeX = X1;
+        EdgeID = EdgeY * GridSizeX + EdgeX;
+    }
+    else if (DX != 0)  // Vertical edge
+    {
+        int32 EdgeX = FMath::Min(X1, X2);
+        int32 EdgeY = Y1;
+        int32 HorizontalsCount = (GridSizeY + 1) * GridSizeX;
+        EdgeID = HorizontalsCount + EdgeY * (GridSizeX + 1) + EdgeX;
+    }
+
+    return (EdgeID >= 0 && EdgeID < MaxEdges && FencedEdges[EdgeID]);
+}
+
+TArray<FCellPos> ASimulationController::FindPathBFS(const FCellPos& Start, const FCellPos& Goal)
+{
+    TQueue<FCellPos> Queue;
+    Queue.Enqueue(Start);
+
+    TMap<FCellPos, FCellPos> CameFrom;
+    CameFrom.Add(Start, FCellPos{-1, -1});
+
+    while (!Queue.IsEmpty())
+    {
+        FCellPos Current;
+        Queue.Dequeue(Current);
+
+        if (Current == Goal)
         {
-            Cell->SetPopulationScales(HumanScale, BittenScale, ZombieScale);
+            // Reconstruct path
+            TArray<FCellPos> Path;
+            FCellPos Pos = Goal;
+            while (Pos != FCellPos{-1, -1})
+            {
+                Path.Add(Pos);
+                Pos = CameFrom[Pos];
+            }
+            Algo::Reverse(Path);
+            return Path;
+        }
+
+        for (const FNeighbor& Dir : Directions)
+        {
+            int32 NX = Current.X + Dir.DX;
+            int32 NY = Current.Y + Dir.DY;
+            FCellPos Next{NX, NY};
+            if (NX >= 0 && NX < GridSizeX && NY >= 0 && NY < GridSizeY && !CameFrom.Contains(Next) && !IsEdgeFencedBetweenCells(Current.X, Current.Y, NX, NY))
+            {
+                Queue.Enqueue(Next);
+                CameFrom.Add(Next, Current);
+            }
         }
     }
+
+    return TArray<FCellPos>();  // No path
+}
+
+TArray<FCellPos> ASimulationController::GetHumanPositions() const
+{
+    TArray<FCellPos> Positions;
+    for (int32 Y = 0; Y < GridSizeY; ++Y)
+    {
+        for (int32 X = 0; X < GridSizeX; ++X)
+        {
+            if (GridOccupants[Y][X] == ECellType::Human)
+            {
+                Positions.Add({X, Y});
+            }
+        }
+    }
+    return Positions;
+}
+
+FCellPos ASimulationController::GetRandomEmptyCell() const
+{
+    TArray<FCellPos> EmptyCells;
+    for (int32 Y = 0; Y < GridSizeY; ++Y)
+    {
+        for (int32 X = 0; X < GridSizeX; ++X)
+        {
+            if (GridOccupants[Y][X] == ECellType::Empty)
+            {
+                EmptyCells.Add({X, Y});
+            }
+        }
+    }
+    if (EmptyCells.IsEmpty()) return {-1, -1};
+    int32 RandIndex = FMath::RandRange(0, EmptyCells.Num() - 1);
+    return EmptyCells[RandIndex];
 }

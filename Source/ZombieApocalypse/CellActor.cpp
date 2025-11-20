@@ -9,62 +9,52 @@ ACellActor::ACellActor()
     USceneComponent* RootScene = CreateDefaultSubobject<USceneComponent>(TEXT("RootScene"));
     RootComponent = RootScene;
 
-    // Human layer (green, bottom)
-    HumanComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("HumanComp"));
-    HumanComp->SetupAttachment(RootComponent);
-    HumanComp->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
-    HumanComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    // Single population comp
+    PopulationComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("PopulationComp"));
+    PopulationComp->SetupAttachment(RootComponent);
+    PopulationComp->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
+    PopulationComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
-    // Bitten layer (yellow, middle)
-    BittenComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BittenComp"));
-    BittenComp->SetupAttachment(RootComponent);
-    BittenComp->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
-    BittenComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-
-    // Zombie layer (red, top)
-    ZombieComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ZombieComp"));
-    ZombieComp->SetupAttachment(RootComponent);
-    ZombieComp->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
-    ZombieComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-
-    // Initial scales to 0
-    SetPopulationScales(0.0f, 0.0f, 0.0f);
+    // Initial hidden
+    PopulationComp->SetVisibility(false);
 }
 
 void ACellActor::BeginPlay()
 {
     Super::BeginPlay();
-
-    // Apply materials
-    if (HumanMaterial) HumanComp->SetMaterial(0, HumanMaterial);
-    if (BittenMaterial) BittenComp->SetMaterial(0, BittenMaterial);
-    if (ZombieMaterial) ZombieComp->SetMaterial(0, ZombieMaterial);
 }
 
-void ACellActor::SetPopulationScales(float HumanScale, float BittenScale, float ZombieScale)
+void ACellActor::SetDominantPopulation(float HumanAmount, float BittenAmount, float ZombieAmount)
 {
-    // Clamp scales
-    HumanScale = FMath::Clamp(HumanScale, 0.0f, 1.0f);
-    BittenScale = FMath::Clamp(BittenScale, 0.0f, 1.0f);
-    ZombieScale = FMath::Clamp(ZombieScale, 0.0f, 1.0f);
+    float Total = HumanAmount + BittenAmount + ZombieAmount;
+    if (Total <= 0.0f)
+    {
+        PopulationComp->SetVisibility(false);
+        return;
+    }
 
-    // Base radii (zombies widest)
-    float HumanRadius = 0.8f;
-    float BittenRadius = 0.85f;
-    float ZombieRadius = 0.9f;
+    // Determine dominant
+    UMaterialInterface* DominantMaterial = nullptr;
+    if (HumanAmount >= BittenAmount && HumanAmount >= ZombieAmount)
+    {
+        DominantMaterial = HumanMaterial;
+    }
+    else if (BittenAmount >= HumanAmount && BittenAmount >= ZombieAmount)
+    {
+        DominantMaterial = BittenMaterial;
+    }
+    else
+    {
+        DominantMaterial = ZombieMaterial;
+    }
 
-    // Human layer
-    HumanComp->SetRelativeScale3D(FVector(HumanRadius, HumanRadius, HumanScale * MaxLayerHeight));
-    float HumanTop = HumanScale * MaxLayerHeight;
+    if (DominantMaterial)
+    {
+        PopulationComp->SetMaterial(0, DominantMaterial);
+    }
 
-    // Bitten layer position and scale
-    float BittenCenterZ = HumanTop * 0.5f + (BittenScale * MaxLayerHeight * 0.5f);
-    BittenComp->SetRelativeLocation(FVector(0.0f, 0.0f, BittenCenterZ));
-    BittenComp->SetRelativeScale3D(FVector(BittenRadius, BittenRadius, BittenScale * MaxLayerHeight));
-    float BittenTop = HumanTop + BittenScale * MaxLayerHeight;
-
-    // Zombie layer position and scale
-    float ZombieCenterZ = BittenTop + (ZombieScale * MaxLayerHeight * 0.5f);
-    ZombieComp->SetRelativeLocation(FVector(0.0f, 0.0f, ZombieCenterZ));
-    ZombieComp->SetRelativeScale3D(FVector(ZombieRadius, ZombieRadius, ZombieScale * MaxLayerHeight));
+    // Scale based on total (cylinder height)
+    float ScaleHeight = (Total / 100.0f) * MaxHeight;  // Assume 100 as max per cell, adjust as needed
+    PopulationComp->SetRelativeScale3D(FVector(1.0f, 1.0f, ScaleHeight));
+    PopulationComp->SetVisibility(true);
 }
