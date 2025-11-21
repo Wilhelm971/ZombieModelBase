@@ -116,12 +116,12 @@ void ATopDownPlayerController::TestPath()
     GridManager->PlaceFence(1, 5, EEdgeDirection::Right);
     GridManager->PlaceFence(1, 6, EEdgeDirection::Right);
     GridManager->PlaceFence(1, 7, EEdgeDirection::Right);
-    GridManager->PlaceFence(1, 8, EEdgeDirection::Right);
-    GridManager->PlaceFence(1, 9, EEdgeDirection::Right);
-    GridManager->PlaceFence(1, 10, EEdgeDirection::Right);
+    GridManager->PlaceFence(3, 8, EEdgeDirection::Right);
+    GridManager->PlaceFence(3, 9, EEdgeDirection::Right);
+    GridManager->PlaceFence(3, 10, EEdgeDirection::Right);
 
     //==================================================================
-    // 1. DRAW ALL FENCES – PERFECTLY ALIGNED WITH YOUR FENCE SYSTEM
+    // 1. DRAW ALL FENCES ï¿½ PERFECTLY ALIGNED WITH YOUR FENCE SYSTEM
     //==================================================================
 
     // Horizontal fences (owned by cells above them or outer top/bottom)
@@ -196,7 +196,7 @@ void ATopDownPlayerController::TestPath()
     }
     else
     {
-        UE_LOG(LogTemp, Error, TEXT("NO PATH FOUND – cell (5,5) is sealed!"));
+        UE_LOG(LogTemp, Error, TEXT("NO PATH FOUND ï¿½ cell (5,5) is sealed!"));
     }
 }
 
