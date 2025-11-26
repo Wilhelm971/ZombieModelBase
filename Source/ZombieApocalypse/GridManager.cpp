@@ -8,9 +8,39 @@ AGridManager::AGridManager()
     {
         Grid[i].State = ECellState::Empty;
     }
- 
+
     HorizontalFence.Init(false, GridSize * (GridSize + 1));
     VerticalFence.Init(false, (GridSize + 1) * GridSize);
+}
+
+void AGridManager::GenerateBuildPoints()
+{
+    /* == based on Grid.Make BuildPoints == */
+    // Find actor location
+    const FVector BaseLoc = GetActorLocation();
+
+    /// Horizontal Points
+    for (int32 Row = 1; Row < GridSize -1; ++Row) // 1 -> 9
+    {
+        for (int32 Col = 0; Col < GridSize; ++Col) // 0 -> 10
+        {
+            int32 Index = GetHorizontalFenceIndex(Col, Row);
+            FVector Position = BaseLoc + FVector((Col + 0.5f) * CellSize, Row * CellSize, 0);
+            
+            // Add to array
+            FBuildPoint& NewPoint = BuildPoints.Add_GetRef(FBuildPoint());
+            NewPoint.WorldPosition = Position;
+            NewPoint.FenceIndex = Index;
+            NewPoint.bIsHorizontal = true;
+
+            // Debug
+            DrawDebugSphere(GetWorld(), Position, 30.f, 16, FColor::Purple, true, 10.f);
+            UE_LOG(LogTemp, Log, TEXT("GridManager: HorizontalFenceIndex(%d, %d) = %d"), (int32)Row, (int32)Col, (int32)Index);
+        }
+    }
+
+    /// Vertical Points
+
 }
  
 bool AGridManager::IsValidCell(int32 X, int32 Y) const

@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Components/StaticMeshComponent.h"
+#include "Engine/StaticMesh.h"
 #include "GridManager.generated.h"
 
 
@@ -69,6 +71,13 @@ class ZOMBIEAPOCALYPSE_API AGridManager : public AActor
 public:
     AGridManager();
 
+    // BuildMode logic:
+    UFUNCTION()
+    //void EnterBuildMode();
+    //void ExitBuildMode();
+    //void FindNearestBuildLocation(const FVector& WorldLocation);
+    void GenerateBuildPoints();
+
     static constexpr int32 GridSize = 10;
 
     // Cell info
@@ -87,7 +96,6 @@ public:
  
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     TArray<bool> VerticalFence;   // size = (GridSize + 1) * GridSize
-
 
     // Index helpers for 2D access
     FORCEINLINE int32 GetGridIndex(int32 X, int32 Y) const { return X + Y * GridSize; }
@@ -109,4 +117,16 @@ public:
     FVector GetCellCenterWorldPos(int32 X, int32 Y) const;
     FVector GetEdgeWorldPos(int32 EdgeX, int32 EdgeY, bool bIsHorizontal) const; //Snap point
     EEdgeDirection GetEdgeDirectionFromMouse(FVector WorldLoc) const; // Player targeting
+
+private:
+    // structure for build points
+    struct FBuildPoint
+    {
+        FVector WorldPosition;
+        int32 FenceIndex;
+        bool bIsHorizontal;
+    };
+
+    // Build points array
+    TArray<FBuildPoint> BuildPoints;
 };

@@ -125,6 +125,11 @@ void ATopDownPlayerController::DecideInteractionAction()
 void ATopDownPlayerController::ToggleBuildMode()
 {
 	bInBuildMode = !bInBuildMode;
+	if (!bHasBuildingPoints)
+	{
+		bHasBuildingPoints = false;
+		GridManager->GenerateBuildPoints();
+	}
 
 	UE_LOG(LogTemp, Log, TEXT("TDPC: Toggled Buildmode, BuildMode = %s"), bInBuildMode ? TEXT("TRUE") : TEXT("FALSE"));
 }
@@ -132,6 +137,8 @@ void ATopDownPlayerController::ToggleBuildMode()
 void ATopDownPlayerController::HandlePlaceFence(FVector WorldLocation)
 {
 	if (!bInBuildMode || !GridManager) return;
+
+	UE_LOG(LogTemp, Log, TEXT("TDPC: Trace Location: %d, %d, %d,"), (int32)WorldLocation.X, (int32)WorldLocation.Y, (int32)WorldLocation.Z);
 
 	// Find closest building point
 

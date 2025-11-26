@@ -72,6 +72,7 @@ public:
 
 	// === Varialbes ===
 	bool bInBuildMode = false;
+	bool bHasBuildingPoints = false;
 
 	// =============================================================
 	// CAMERA PROPERTIES
