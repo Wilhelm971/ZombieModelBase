@@ -93,7 +93,6 @@ public:
     FORCEINLINE int32 GetGridIndex(int32 X, int32 Y) const { return X + Y * GridSize; }
     FORCEINLINE int32 GetHorizontalFenceIndex(int32 CellX, int32 GridLineY) const { return CellX + GridLineY * GridSize; }
     FORCEINLINE int32 GetVerticalFenceIndex(int32 GridLineX, int32 CellY) const { return GridLineX * GridSize + CellY; }
-
     
     bool IsValidCell(int32 X, int32 Y) const;
  
