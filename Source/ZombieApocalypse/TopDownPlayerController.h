@@ -41,7 +41,6 @@ public:
 	// functions 01
 	void DecideInteractionAction();
 	void ToggleBuildMode();
-	void HandlePlaceFence(FVector WorldLocation);
 
 	/** Cached reference to the controlled pawn (camera pawn). */
 	APawn* ControlledPawn;

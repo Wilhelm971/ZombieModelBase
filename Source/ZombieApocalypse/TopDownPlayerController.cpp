@@ -105,43 +105,29 @@ void ATopDownPlayerController::HandleZoom(const FInputActionValue& Value)
 
 void ATopDownPlayerController::DecideInteractionAction()
 {
-	if (bInBuildMode)
+	if (bInBuildMode && GridManager)
 	{
-		// Line trace
-		FHitResult Hit;
-		bool bHit = GetHitResultUnderCursor(ECC_Visibility, false, Hit);
-
-		if (bHit)
-		{
-			// draws a debug sphere at trace Hit-Locaiton
-			DrawDebugSphere(GetWorld(), Hit.ImpactPoint, 20.f, 16, FColor::Red, false, 10.f); 
-
-			// Send world location for processing
-			HandlePlaceFence(Hit.ImpactPoint);
-		}
+		GridManager->TryPlaceFenceAtCurrentHover();
 	}
 }
 
 void ATopDownPlayerController::ToggleBuildMode()
 {
 	bInBuildMode = !bInBuildMode;
+
 	if (!bHasBuildingPoints)
 	{
-		bHasBuildingPoints = false;
+		bHasBuildingPoints = true;
 		GridManager->GenerateBuildPoints();
 	}
 
-	UE_LOG(LogTemp, Log, TEXT("TDPC: Toggled Buildmode, BuildMode = %s"), bInBuildMode ? TEXT("TRUE") : TEXT("FALSE"));
+	if (bInBuildMode)
+		GridManager->EnterBuildMode();
+	else
+		GridManager->ExitBuildMode();
+
+	UE_LOG(LogTemp, Log, TEXT("BuildMode = %s"), bInBuildMode ? TEXT("ON") : TEXT("OFF"));
 }
 
-void ATopDownPlayerController::HandlePlaceFence(FVector WorldLocation)
-{
-	if (!bInBuildMode || !GridManager) return;
-
-	UE_LOG(LogTemp, Log, TEXT("TDPC: Trace Location: %d, %d, %d,"), (int32)WorldLocation.X, (int32)WorldLocation.Y, (int32)WorldLocation.Z);
-
-	// Find closest building point
-
-}
 
 

@@ -61,7 +61,17 @@ struct FGridNode
     }
 };
 
+// structure for BuildPoints
+USTRUCT()
+struct FBuildPoint 
+{
+    GENERATED_BODY()
 
+    FVector WorldPosition;
+    int32 FenceIndex = INDEX_NONE;
+    bool bIsHorizontal = false; // changed later
+    bool bIsUsed = false;
+};
 
 UCLASS()
 class ZOMBIEAPOCALYPSE_API AGridManager : public AActor
@@ -70,13 +80,24 @@ class ZOMBIEAPOCALYPSE_API AGridManager : public AActor
 
 public:
     AGridManager();
+    virtual void Tick(float DeltaTime) override;
 
     // BuildMode logic:
     UFUNCTION()
-    //void EnterBuildMode();
-    //void ExitBuildMode();
-    //void FindNearestBuildLocation(const FVector& WorldLocation);
+    void EnterBuildMode();
+    void ExitBuildMode();
+    int32 FindNearestBuildPoint(const FVector& WorldLocation);
+    void HidePreview();
+    void UpdatePreview(const FBuildPoint& Point);
+    void TryPlaceFenceAtCurrentHover();
     void GenerateBuildPoints();
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Building")
+    TSubclassOf<AActor> FencePreviewClass; // Assign a translucent fence BP in editor
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Building")
+    TSubclassOf<AActor> FinalFenceClass; // Real Fence beeing placed, Assign in editor
+
 
     static constexpr int32 GridSize = 10;
 
@@ -99,8 +120,8 @@ public:
 
     // Index helpers for 2D access
     FORCEINLINE int32 GetGridIndex(int32 X, int32 Y) const { return X + Y * GridSize; }
-    FORCEINLINE int32 GetHorizontalFenceIndex(int32 CellX, int32 GridLineY) const { return CellX + GridLineY * GridSize; }
-    FORCEINLINE int32 GetVerticalFenceIndex(int32 GridLineX, int32 CellY) const { return GridLineX * GridSize + CellY; }
+    FORCEINLINE int32 GetHorizontalFenceIndex(int32 Col, int32 Row) const;
+    FORCEINLINE int32 GetVerticalFenceIndex(int32 GridLineX, int32 CellY) const;
     
     bool IsValidCell(int32 X, int32 Y) const;
  
@@ -119,13 +140,16 @@ public:
     EEdgeDirection GetEdgeDirectionFromMouse(FVector WorldLoc) const; // Player targeting
 
 private:
-    // structure for build points
-    struct FBuildPoint
-    {
-        FVector WorldPosition;
-        int32 FenceIndex;
-        bool bIsHorizontal;
-    };
+
+    // BuildModeState
+    bool bBuildModeActive = false;
+
+    // Preview logic:
+    UPROPERTY()
+    AActor* FencePreviewActor = nullptr;
+
+    // Currently hovered build point (-1 = none)
+    int32 CurrentHoveredPointIndex = INDEX_NONE;
 
     // Build points array
     TArray<FBuildPoint> BuildPoints;
