@@ -109,6 +109,11 @@ void ATopDownPlayerController::DecideInteractionAction()
 	{
 		GridManager->TryPlaceFenceAtCurrentHover();
 	}
+	else if (!bInBuildMode && GridManager && bHasBuildingPoints)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("DebugPathfind!"))
+		GridManager->DebugPathfind(FVector2D(0,0), FVector2D(7,7));
+	}
 }
 
 void ATopDownPlayerController::ToggleBuildMode()

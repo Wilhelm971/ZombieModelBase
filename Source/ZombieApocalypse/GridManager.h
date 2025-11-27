@@ -139,6 +139,13 @@ public:
     FVector GetEdgeWorldPos(int32 EdgeX, int32 EdgeY, bool bIsHorizontal) const; //Snap point
     EEdgeDirection GetEdgeDirectionFromMouse(FVector WorldLoc) const; // Player targeting
 
+    UFUNCTION(BlueprintCallable, Category = "Debug|Pathfinding")
+    void DebugPathfind(FVector2D Goal, FVector2D Start);
+
+    UFUNCTION()
+    int32 GetFenceIndexBetweenCells(int32 CellX1, int32 CellY1, int32 CellX2, int32 CellY2) const;
+
+
 private:
 
     // BuildModeState
