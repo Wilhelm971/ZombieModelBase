@@ -159,7 +159,6 @@ void ATopDownPlayerController::ToggleBuildMode()
 }
 
 
-
 void ATopDownPlayerController::NextTurn()
 {
 	if (bInBuildMode || bGameWon || bGameLost || !bFinishedTurn) return;  // Skip if building or game over

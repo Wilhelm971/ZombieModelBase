@@ -35,6 +35,10 @@ public:
 	UFUNCTION()
 	FIntPoint GetLocation();
 
+	UPROPERTY(EditAnywhere, Category = "NPC|Movement")
+	float TurnBasedMoveDuration = 1.f;
+	
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;

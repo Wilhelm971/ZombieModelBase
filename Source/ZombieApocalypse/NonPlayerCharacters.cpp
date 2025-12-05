@@ -40,7 +40,7 @@ void ANonPlayerCharacters::UpdateMesh()
 	}
 	else if (CurrentState == EState::Human && HumanSkin)
 	{
-		TargetMesh = BittenSkin;
+		TargetMesh = HumanSkin;
 	}
 
 	// safe check
