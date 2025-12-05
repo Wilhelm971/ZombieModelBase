@@ -29,6 +29,10 @@ class ZOMBIEAPOCALYPSE_API AZombieManager : public AActor
 public:
     AZombieManager();
 
+    // Spawn all humans and initial zombie
+    UFUNCTION(BlueprintCallable)
+    void SpawnInitialNPCs();
+
     UPROPERTY(EditAnywhere, Category = "Zombies")
     TSubclassOf<ANonPlayerCharacters> HumanClass;
 

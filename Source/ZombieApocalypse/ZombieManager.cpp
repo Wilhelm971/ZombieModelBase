@@ -10,9 +10,48 @@ void AZombieManager::BeginPlay()
 {
     Super::BeginPlay();
 
-    // If NPCs are spawned dynamically, no need to fetch them here
-    // AllNPCs will be filled at spawn time
+    SpawnInitialNPCs();
 }
+
+void AZombieManager::SpawnInitialNPCs()
+{
+    if (!GridManager) return;
+
+    int32 GridSizeX = 10; // assuming 10x10 grid
+    int32 GridSizeY = 10;
+
+    // Spawn humans on all cells
+    for (int32 X = 0; X < GridSizeX; ++X)
+    {
+        for (int32 Y = 0; Y < GridSizeY; ++Y)
+        {
+            FVector SpawnPos = GridManager->GetCellCenterWorldPos(X, Y);
+            ANonPlayerCharacters* Human = GetWorld()->SpawnActor<ANonPlayerCharacters>(HumanClass, SpawnPos, FRotator::ZeroRotator);
+            if (Human)
+            {
+                Human->SetState(EState::Human);
+                Human->GridPosition = FIntPoint(X, Y);
+
+                GridManager->Grid[Y * GridSizeX + X].bHasHuman = true;
+                AllNPCs.Add(Human);
+            }
+        }
+    }
+
+    // Spawn zombie in the center
+    int32 CenterX = GridSizeX / 2;
+    int32 CenterY = GridSizeY / 2;
+    FVector ZombieSpawnPos = GridManager->GetCellCenterWorldPos(CenterX, CenterY);
+    ANonPlayerCharacters* Zombie = GetWorld()->SpawnActor<ANonPlayerCharacters>(ZombieClass, ZombieSpawnPos, FRotator::ZeroRotator);
+    if (Zombie)
+    {
+        Zombie->SetState(EState::Zombie);
+        Zombie->GridPosition = FIntPoint(CenterX, CenterY);
+        AllNPCs.Add(Zombie);
+    }
+}
+
+
 
 void AZombieManager::ExecuteTurn()
 {
