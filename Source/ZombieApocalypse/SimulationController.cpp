@@ -28,6 +28,7 @@ void ASimulationController::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
 
+    /*
     if (TimeStepsFinished < 100)
     {
         AccumulatedTime += DeltaTime;
@@ -45,6 +46,7 @@ void ASimulationController::Tick(float DeltaTime)
             }
         }
     }
+    */
 }
 
 // Function to read data from Unreal DataTable into the graphPts vector
@@ -162,4 +164,10 @@ void ASimulationController::PerformSimulationStep()
     Zombies = FMath::Max(0.f, Zombies + BecomingInfected);
 
     Bitten = ConveyorContent();
+}
+
+void ASimulationController::AdvanceSimulationStep()
+{
+    PerformSimulationStep();
+    ++TimeStepsFinished;
 }

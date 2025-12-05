@@ -6,6 +6,8 @@
 #include "GameFramework/PlayerController.h"
 #include "InputActionValue.h"
 #include "GridManager.h"
+#include "SimulationController.h"
+#include "ZombieManager.h"
 #include "TopDownPlayerController.generated.h"
 
 
@@ -42,12 +44,20 @@ public:
 	void DecideInteractionAction();
 	void ToggleBuildMode();
 
+	void NextTurn();
+
 	/** Cached reference to the controlled pawn (camera pawn). */
 	APawn* ControlledPawn;
 
 	// GridManager reference
 	UPROPERTY()
 	AGridManager* GridManager;
+
+	UPROPERTY()
+	AZombieManager* ZombieManager;
+
+	UPROPERTY()
+	ASimulationController* SimulationController;
 
 	/** Input mapping context for enhanced input system. */
 	UPROPERTY(EditDefaultsOnly, Category = "Enhanced Input")
@@ -69,9 +79,20 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Enhanced Input")
 	UInputAction* InteractionAction;
 
+	/** Input action for Next turn. */
+	UPROPERTY(EditDefaultsOnly, Category = "Enhanced Input")
+	UInputAction* NextTurnAction;
+
 	// === Varialbes ===
 	bool bInBuildMode = false;
 	bool bHasBuildingPoints = false;
+
+	// Game state
+	UPROPERTY(BlueprintReadOnly, Category = "Game State")
+	bool bGameWon = false;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Game State")
+	bool bGameLost = false;
 
 	// =============================================================
 	// CAMERA PROPERTIES
@@ -94,4 +115,9 @@ public:
 
 	/** Target arm length for smooth zooming interpolation. */
 	float TargetArmLength = 2500.0f;
+
+private:
+	void CheckGameConditions();
+
+	bool bFinishedTurn = true;
 };
