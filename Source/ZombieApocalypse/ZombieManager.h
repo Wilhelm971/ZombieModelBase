@@ -1,70 +1,74 @@
 ﻿// Copyright University of Inland Norway. All Rights Reserved.
-
+/*
 #pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "NonPlayerCharacters.h"
+#include "GridManager.h"
 #include "ZombieManager.generated.h"
 
-class AGridManager;
-class AZombie;
-class AHuman;
-
-USTRUCT(BlueprintType)
-struct FBittenHuman
+USTRUCT()
+struct FBittenEntry
 {
     GENERATED_BODY()
 
-    UPROPERTY() FIntPoint GridPos;
-    UPROPERTY() AHuman* HumanActor = nullptr;
-    UPROPERTY() int32 TurnsLeft = 15;
+    FIntPoint GridPos;
+    ABeing* HumanActor = nullptr;
+    int32 TurnsLeft = 15;
 };
 
 UCLASS()
-class ZOMBIEAPOCALYPSE_API AZombieManager : public AActor
+class YOURGAME_API AZombieManager : public AActor
 {
     GENERATED_BODY()
 
 public:
     AZombieManager();
 
-    UFUNCTION(BlueprintCallable, Category = "Zombie System")
-    void Initialize(AGridManager* InGridManager, const TArray<AZombie*>& StartingZombies);
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    TSubclassOf<ABeing> BeingClass;
 
-    UFUNCTION(BlueprintCallable, Category = "Zombie System")
-    void ExecuteZombiePhase();
+    UPROPERTY(BlueprintReadWrite)
+    AGridManager* GridManager;
 
-    // Returns true = WIN (all humans safe + no bitten)
-    UFUNCTION(BlueprintCallable, Category = "Game State")
-    bool IsWinConditionMet() const;
+    UPROPERTY(BlueprintReadWrite)
+    TArray<ABeing*> AllBeings;    // All humans AND zombies
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Settings")
-    TSubclassOf<AZombie> ZombieClass;
+    UPROPERTY(EditAnywhere)
+    int32 ZombiesPerTurn = 5;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Settings")
-    int32 ZombiesPerTurn = 3;
+    UPROPERTY()
+    TArray<FBittenEntry> BittenList;
 
-protected:
     virtual void BeginPlay() override;
 
+    void Initialize(AGridManager* InGrid);
+
+    void SpawnInitialPopulation();
+
+    void ExecuteZombieTurn();
+
+    bool IsWinConditionMet() const;
+
 private:
-    UPROPERTY() TObjectPtr<AGridManager> GridManager;
 
-    UPROPERTY() TArray<AZombie*> AllZombies;
-    UPROPERTY() TArray<FBittenHuman> BittenHumans;
+    // ===== Core Helpers =====
+    FVector GridToWorld(FIntPoint Grid) const;
+    FIntPoint WorldToGrid(FVector World) const;
 
-    // === Helper functions that work with your exact GridManager ===
-    FIntPoint WorldToGrid(FVector WorldLocation) const;
-    FVector GridToWorld(FIntPoint GridPos) const;
-    bool CanZombieReachHuman(FIntPoint ZombieGrid, FIntPoint HumanGrid) const;
-    TArray<FIntPoint> ReconstructPathFromBFS(const TMap<FIntPoint, FIntPoint>& CameFrom, FIntPoint End) const;
+    //TArray<ABeing*> GetZombies() const;
+    TArray<FIntPoint> GetHumanPositions() const;
 
-    TArray<AZombie*> GetShuffledZombies() const;
-    bool TryMoveAndBite(AZombie* Zombie);
-    void UpdateBittenTimers();
-    void TurnHumanIntoZombie(const FBittenHuman& Data);
+    ABeing* GetHumanAt(FIntPoint GridPos) const;
 
-    // You must implement these two in your GameMode or GridManager
-    TArray<FIntPoint> GetCurrentHumanPositions() const;      // ← You fill this
-    AHuman* GetHumanAtGridPos(FIntPoint Pos) const;          // ← You fill this
+    bool TryMoveAndBite(ABeing* Zombie);
+
+    bool CanReachHuman(FIntPoint Start, FIntPoint Goal) const;
+
+    bool BuildBFSPath(FIntPoint Start, FIntPoint Goal, TArray<FIntPoint>& OutPath) const;
+
+    void UpdateBitten();
+    void TurnHumanIntoZombie(const FBittenEntry& Data);
 };
+*/
