@@ -21,6 +21,9 @@ public:
 
 private:
 	class ASimulationController* SimulationController{ nullptr };
+	class AGridManager* GridManager{ nullptr };
 
+
+	FString BuildingModeText;
 
 };

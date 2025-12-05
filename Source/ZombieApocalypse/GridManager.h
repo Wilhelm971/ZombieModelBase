@@ -99,6 +99,8 @@ public:
     TSubclassOf<AActor> FinalFenceClass; // Real Fence beeing placed, Assign in editor
 
 
+    int32 CurrentCoins;
+    int32 BuildCost = 25;
     static constexpr int32 GridSize = 10;
 
     // Cell info
@@ -146,10 +148,12 @@ public:
     int32 GetFenceIndexBetweenCells(int32 CellX1, int32 CellY1, int32 CellX2, int32 CellY2) const;
 
 
-private:
-
     // BuildModeState
     bool bBuildModeActive = false;
+
+private:
+
+    
 
     // Preview logic:
     UPROPERTY()

@@ -5,6 +5,7 @@ AGridManager::AGridManager()
 {
     PrimaryActorTick.bCanEverTick = true;
     PrimaryActorTick.bStartWithTickEnabled = false;
+    CurrentCoins = 40;
 
     Grid.SetNum(GridSize * GridSize);
     for (int32 i = 0; i < Grid.Num(); ++i)
@@ -60,7 +61,11 @@ void AGridManager::Tick(float DeltaTime)
 
     //UE_LOG(LogTemp, Warning, TEXT("GridManager: |---END---|"));
     CurrentHoveredPointIndex = BestIndex;
-    UpdatePreview(BuildPoints[BestIndex]); // Updates the previewmesh location AndOr Rotation
+
+    if (CurrentCoins >= BuildCost)
+    {
+        UpdatePreview(BuildPoints[BestIndex]); // Updates the previewmesh location AndOr Rotation
+    }
 }
 
 void AGridManager::EnterBuildMode()
@@ -155,6 +160,8 @@ void AGridManager::UpdatePreview(const FBuildPoint& Point)
 
 void AGridManager::TryPlaceFenceAtCurrentHover()
 {
+    if (CurrentCoins < BuildCost) return;
+    
     if (CurrentHoveredPointIndex == INDEX_NONE) return;
     if (BuildPoints[CurrentHoveredPointIndex].bIsUsed) return;
 
@@ -174,6 +181,7 @@ void AGridManager::TryPlaceFenceAtCurrentHover()
     {
         FRotator Rot = Point.bIsHorizontal ? FRotator(0.f, 90.f, 0.f) : FRotator::ZeroRotator;
         GetWorld()->SpawnActor<AActor>(FinalFenceClass, Point.WorldPosition, Rot);
+        CurrentCoins -= BuildCost;
     }
 
     // hide preview after building
