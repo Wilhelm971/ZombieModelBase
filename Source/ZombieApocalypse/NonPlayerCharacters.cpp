@@ -46,6 +46,8 @@ void ANonPlayerCharacters::MoveAlongWorldPath(const TArray<FVector>& WorldPath)
 {
 	if (bIsMoving || WorldPath.Num() < 2) return;
 
+	UE_LOG(LogTemp, Log, TEXT("NPC: Character Move Function called!"))
+
 	bIsMoving = true;
 	CurrentWorldPath = WorldPath;
 	MoveStartLocation = GetActorLocation();
@@ -70,27 +72,50 @@ void ANonPlayerCharacters::MoveAlongWorldPath(const TArray<FVector>& WorldPath)
 
 void ANonPlayerCharacters::UpdateMesh()
 {
+	if (!GetMesh())
+		return;
 
-	// Pick mesh according to state
-	USkeletalMesh* TargetMesh = HumanSkin; // safe fallback
+	USkeletalMesh* TargetMesh = nullptr;
+	FVector NewScale = FVector::OneVector;
+	FRotator NewRotation = FRotator::ZeroRotator;
+	FVector NewLocation = FVector::ZeroVector;
 
-	if (CurrentState == EState::Zombie && ZombieSkin)
+	// ---------- PICK STATE ----------
+	switch (CurrentState)
 	{
+	case EState::Zombie:
 		TargetMesh = ZombieSkin;
-	}
-	else if (CurrentState == EState::Bitten && BittenSkin)
-	{
+		NewScale = FVector(0.3f);
+		NewRotation = FRotator(0.f, 90.f, 0.f);
+		NewLocation = FVector(0.f, 0.f, 0.f);
+		break;
+
+	case EState::Bitten:
 		TargetMesh = BittenSkin;
-	}
-	else if (CurrentState == EState::Human && HumanSkin)
-	{
+		NewScale = FVector(0.45f);
+		NewRotation = FRotator(0.f, 90.f, -90.f);
+		NewLocation = FVector(-37.f, 0.f, 5.f);
+		break;
+
+	case EState::Human:
+	default:
 		TargetMesh = HumanSkin;
+		NewScale = FVector(0.5f);
+		NewRotation = FRotator(0.f, 90.f, 0.f);
+		NewLocation = FVector(0.f, 0.f, 0.f);
+		break;
 	}
 
-	// safe check
-	if (!TargetMesh) return;
+	// ---------- APPLY MESH ----------
+	if (TargetMesh)
+	{
+		GetMesh()->SetSkeletalMesh(TargetMesh);
+	}
 
-	GetMesh()->SetSkeletalMesh(TargetMesh);
+	// ---------- APPLY TRANSFORMS ----------
+	GetMesh()->SetRelativeScale3D(NewScale);
+	GetMesh()->SetRelativeRotation(NewRotation);
+	GetMesh()->SetRelativeLocation(NewLocation);
 }
 
 FVector ANonPlayerCharacters::GetPositionAlongPath(float Progress)
@@ -147,5 +172,5 @@ EState ANonPlayerCharacters::GetState()
 
 void ANonPlayerCharacters::TestStateLogic()
 {
-	SetState(EState::Zombie);
+	SetState(EState::Bitten);
 }

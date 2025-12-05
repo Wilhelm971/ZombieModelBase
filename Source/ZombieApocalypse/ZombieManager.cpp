@@ -165,8 +165,15 @@ bool AZombieManager::TryMoveAndBite(ANonPlayerCharacters* Zombie)
 
     if (Path.Num() < 2) return false;
 
-    //MOVE ZOMBIE MOVE ZOMBIE MOVE ZOMBIE MOVE ZOMBIE MOVE ZOMBIE MOVE ZOMBIE MOVE ZOMBIE MOVE ZOMBIE MOVE ZOMBIE MOVE ZOMBIE MOVE ZOMBIE MOVE ZOMBIE 
-    //Zombie->MoveAlongPath(Path);
+    TArray<FVector> VPath;
+    for (auto& Node : Path)
+    {
+        FVector Location = GridManager->GetCellCenterWorldPos(Node.X, Node.Y);
+        VPath.Add(Location);
+    }
+
+    // give the zombie a movement path
+    Zombie->MoveAlongWorldPath(VPath);
 
     ANonPlayerCharacters* Human = GetHumanAtGridPos(Best);
     if (Human)
