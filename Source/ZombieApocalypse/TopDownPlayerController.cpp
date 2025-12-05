@@ -6,6 +6,8 @@
 #include "EnhancedInputSubsystems.h"
 #include "GameFramework/Pawn.h"
 #include "EngineUtils.h"
+#include "SimulationController.h"
+#include "ZombieManager.h"
 #include "GameFramework/SpringArmComponent.h"
 
 ATopDownPlayerController::ATopDownPlayerController()
@@ -39,6 +41,25 @@ void ATopDownPlayerController::BeginPlay()
 		break;
 	}
 
+	// Cache ZombieManager
+	for (TActorIterator<AZombieManager> It(GetWorld()); It; ++It)
+	{
+		ZombieManager = *It;
+		break;
+	}
+
+	// Cache SimulationController
+	for (TActorIterator<ASimulationController> It(GetWorld()); It; ++It)
+	{
+		SimulationController = *It;
+		break;
+	}
+
+	if (!ZombieManager || !SimulationController)
+	{
+		UE_LOG(LogTemp, Error, TEXT("TopDownPlayerController: Missing ZombieManager or SimulationController!"));
+	}
+
 	if (!GridManager)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("TDPC: No grid manager found! Build system broken!"))
@@ -62,6 +83,9 @@ void ATopDownPlayerController::SetupInputComponent()
 
 		if (BuildModeAction)
 			EnhancedInput->BindAction(BuildModeAction, ETriggerEvent::Triggered, this, &ATopDownPlayerController::ToggleBuildMode);
+		
+		if (NextTurnAction)
+			EnhancedInput->BindAction(NextTurnAction, ETriggerEvent::Completed, this, &ATopDownPlayerController::NextTurn);
 
 	}
 }
@@ -135,4 +159,58 @@ void ATopDownPlayerController::ToggleBuildMode()
 }
 
 
+
+void ATopDownPlayerController::NextTurn()
+{
+	if (bInBuildMode || bGameWon || bGameLost || !bFinishedTurn) return;  // Skip if building or game over
+
+	bFinishedTurn = false;
+	
+	// Step 1: Execute Zombie Phase
+	if (ZombieManager)
+	{
+		ZombieManager->ExecuteZombiePhase();
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("No ZombieManager found! Skipping zombie phase."));
+	}
+
+	// Step 2: Advance Simulation Step
+	if (SimulationController)
+	{
+		SimulationController->AdvanceSimulationStep();
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("No SimulationController found! Skipping simulation step."));
+	}
+
+	// Step 3: Check Game Conditions
+	CheckGameConditions();
+
+	bFinishedTurn = true;
+}
+
+void ATopDownPlayerController::CheckGameConditions()
+{
+	if (ZombieManager && ZombieManager->IsWinConditionMet())
+	{
+		bGameWon = true;
+		UE_LOG(LogTemp, Warning, TEXT("WIN! All humans safe."));
+		// TODO: Show win UI, pause input, etc. (e.g., DisableInput(this);)
+		return;
+	}
+
+	if (SimulationController && SimulationController->Susceptible <= 0)
+	{
+		bGameLost = true;
+		UE_LOG(LogTemp, Error, TEXT("LOSE! No humans left."));
+		// TODO: Show lose UI, pause input, etc.
+		return;
+	}
+
+	// If no win/lose, continue (e.g., increment turn counter if you add one)
+	UE_LOG(LogTemp, Log, TEXT("Turn advanced. Press Spacebar for next."));
+}
 
