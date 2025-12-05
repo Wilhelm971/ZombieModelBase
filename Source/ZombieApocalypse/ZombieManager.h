@@ -29,18 +29,15 @@ class ZOMBIEAPOCALYPSE_API AZombieManager : public AActor
 public:
     AZombieManager();
 
-    // Spawn all humans and initial zombie
-    UFUNCTION(BlueprintCallable)
-    void SpawnInitialNPCs();
-
+    // Reference to NPC class for spawning all units
     UPROPERTY(EditAnywhere, Category = "Zombies")
-    TSubclassOf<ANonPlayerCharacters> HumanClass;
+    TSubclassOf<ANonPlayerCharacters> NPCClass;
 
-    UPROPERTY(EditAnywhere, Category = "Zombies")
-    TSubclassOf<ANonPlayerCharacters> ZombieClass;
-
-    UPROPERTY(EditAnywhere, Category = "Zombies")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
     AGridManager* GridManager;
+
+    UFUNCTION()
+    void SpawnInitialNPCs();
 
     // Called by TurnManager each turn
     UFUNCTION()
@@ -56,9 +53,10 @@ private:
     UPROPERTY()
     TArray<FBittenNPC> BittenNPCs;
 
-    // Helpers
+    // Turn-based helpers
+    void UpdateBittenTimers();
+    bool TryMoveAndBite(ANonPlayerCharacters* Zombie);
+    TArray<ANonPlayerCharacters*> GetShuffledZombies() const;
     TArray<FIntPoint> GetCurrentHumanPositions() const;
     ANonPlayerCharacters* GetHumanAtGridPos(const FIntPoint& Pos) const;
-    bool TryMoveAndBite(ANonPlayerCharacters* Zombie);
-    void UpdateBittenTimers();
 };

@@ -32,11 +32,11 @@ public:
 	UFUNCTION(CallInEditor, Category = "EditorFunction")
 	void TestStateLogic();
 
-	UFUNCTION()
-	FIntPoint GetLocation();
-
 	UPROPERTY(EditAnywhere, Category = "NPC|Movement")
 	float TurnBasedMoveDuration = 1.f;
+
+	UPROPERTY()
+	FIntPoint GridPosition;
 	
 
 protected:
@@ -64,10 +64,6 @@ private:
 
 	UPROPERTY(EditAnywhere, Category = "NPC")
 	float AcceptanceRadius = 25.f;
-
-	// State
-	UPROPERTY()
-	FIntPoint CurrentLocation;
 
 	UPROPERTY(VisibleAnywhere, Category = "NPC")
 	EState CurrentState = EState::Human;

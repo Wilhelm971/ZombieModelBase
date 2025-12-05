@@ -1,9 +1,10 @@
 #include "ZombieManager.h"
 #include "Kismet/GameplayStatics.h"
+#include "Engine/World.h"
 
 AZombieManager::AZombieManager()
 {
-    PrimaryActorTick.bCanEverTick = false; // Turn-based
+    PrimaryActorTick.bCanEverTick = false; // Turn-based, no tick
 }
 
 void AZombieManager::BeginPlay()
@@ -15,10 +16,14 @@ void AZombieManager::BeginPlay()
 
 void AZombieManager::SpawnInitialNPCs()
 {
-    if (!GridManager) return;
+    if (!GridManager || !NPCClass) return;
 
-    int32 GridSizeX = 10; // assuming 10x10 grid
-    int32 GridSizeY = 10;
+    const int32 GridSizeX = 10; // Assuming 10x10 grid
+    const int32 GridSizeY = 10;
+
+    FActorSpawnParameters SpawnParams;
+    SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+    SpawnParams.bNoFail = true;
 
     // Spawn humans on all cells
     for (int32 X = 0; X < GridSizeX; ++X)
@@ -26,10 +31,9 @@ void AZombieManager::SpawnInitialNPCs()
         for (int32 Y = 0; Y < GridSizeY; ++Y)
         {
             FVector SpawnPos = GridManager->GetCellCenterWorldPos(X, Y);
-            ANonPlayerCharacters* Human = GetWorld()->SpawnActor<ANonPlayerCharacters>(HumanClass, SpawnPos, FRotator::ZeroRotator);
+            ANonPlayerCharacters* Human = GetWorld()->SpawnActor<ANonPlayerCharacters>(NPCClass, SpawnPos, FRotator::ZeroRotator, SpawnParams);
             if (Human)
             {
-                Human->SetState(EState::Human);
                 Human->GridPosition = FIntPoint(X, Y);
 
                 GridManager->Grid[Y * GridSizeX + X].bHasHuman = true;
@@ -38,43 +42,30 @@ void AZombieManager::SpawnInitialNPCs()
         }
     }
 
-    // Spawn zombie in the center
-    int32 CenterX = GridSizeX / 2;
-    int32 CenterY = GridSizeY / 2;
+    // Spawn zombie in center
+    int32 CenterX = 5;
+    int32 CenterY = 5;
     FVector ZombieSpawnPos = GridManager->GetCellCenterWorldPos(CenterX, CenterY);
-    ANonPlayerCharacters* Zombie = GetWorld()->SpawnActor<ANonPlayerCharacters>(ZombieClass, ZombieSpawnPos, FRotator::ZeroRotator);
+    ANonPlayerCharacters* Zombie = GetWorld()->SpawnActor<ANonPlayerCharacters>(NPCClass, ZombieSpawnPos, FRotator::ZeroRotator, SpawnParams);
     if (Zombie)
     {
         Zombie->SetState(EState::Zombie);
         Zombie->GridPosition = FIntPoint(CenterX, CenterY);
+
         AllNPCs.Add(Zombie);
     }
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("No Zombie"));
+    }
 }
-
-
 
 void AZombieManager::ExecuteTurn()
 {
     UpdateBittenTimers();
 
-    // Collect all zombies
-    TArray<ANonPlayerCharacters*> ActiveZombies;
-    for (ANonPlayerCharacters* NPC : AllNPCs)
-    {
-        if (NPC && NPC->GetState() == EState::Zombie)
-        {
-            ActiveZombies.Add(NPC);
-        }
-    }
+    TArray<ANonPlayerCharacters*> ActiveZombies = GetShuffledZombies();
 
-    // Shuffle zombies for random turn order
-    for (int32 i = 0; i < ActiveZombies.Num(); ++i)
-    {
-        int32 SwapIndex = FMath::RandRange(0, ActiveZombies.Num() - 1);
-        ActiveZombies.Swap(i, SwapIndex);
-    }
-
-    // Each zombie tries to move and bite
     for (ANonPlayerCharacters* Z : ActiveZombies)
     {
         TryMoveAndBite(Z);
@@ -87,6 +78,7 @@ void AZombieManager::UpdateBittenTimers()
     {
         FBittenNPC& B = BittenNPCs[i];
         B.TurnsLeft--;
+
         if (B.TurnsLeft <= 0 && B.NPC)
         {
             B.NPC->SetState(EState::Zombie);
@@ -95,15 +87,31 @@ void AZombieManager::UpdateBittenTimers()
     }
 }
 
+TArray<ANonPlayerCharacters*> AZombieManager::GetShuffledZombies() const
+{
+    TArray<ANonPlayerCharacters*> Zombies;
+    for (ANonPlayerCharacters* NPC : AllNPCs)
+    {
+        if (NPC && NPC->GetState() == EState::Zombie)
+            Zombies.Add(NPC);
+    }
+
+    for (int32 i = 0; i < Zombies.Num(); ++i)
+    {
+        int32 SwapIdx = FMath::RandRange(0, Zombies.Num() - 1);
+        Zombies.Swap(i, SwapIdx);
+    }
+
+    return Zombies;
+}
+
 TArray<FIntPoint> AZombieManager::GetCurrentHumanPositions() const
 {
     TArray<FIntPoint> Humans;
     for (ANonPlayerCharacters* NPC : AllNPCs)
     {
         if (NPC && NPC->GetState() == EState::Human)
-        {
-            Humans.Add(NPC->GridPosition); // <-- Use stored grid position
-        }
+            Humans.Add(NPC->GridPosition);
     }
     return Humans;
 }
@@ -113,55 +121,53 @@ ANonPlayerCharacters* AZombieManager::GetHumanAtGridPos(const FIntPoint& Pos) co
     for (ANonPlayerCharacters* NPC : AllNPCs)
     {
         if (NPC && NPC->GetState() == EState::Human && NPC->GridPosition == Pos)
-        {
             return NPC;
-        }
     }
     return nullptr;
 }
 
 bool AZombieManager::TryMoveAndBite(ANonPlayerCharacters* Zombie)
 {
-    if (!Zombie || !GridManager) return false;
+    if (!GridManager || !Zombie) return false;
 
-    FIntPoint ZPos = Zombie->GridPosition; // <-- Use stored grid position
     TArray<FIntPoint> Humans = GetCurrentHumanPositions();
-
     if (Humans.Num() == 0) return false;
+
+    FIntPoint ZPos = Zombie->GridPosition;
 
     FIntPoint Best(-1, -1);
     int32 BestDist = MAX_int32;
-    TArray<FGridNode> BestPath;
 
-    // Find closest reachable human by actual path
-    for (const FIntPoint& HPos : Humans)
+    for (FIntPoint HPos : Humans)
     {
-        TArray<FGridNode> PathNodes;
-        bool bCanReach = GridManager->FindPath(FGridNode(ZPos.X, ZPos.Y), FGridNode(HPos.X, HPos.Y), PathNodes);
+        TArray<FGridNode> Path;
+        FGridNode Start(HPos.X, HPos.Y);
+        FGridNode End(HPos.X, HPos.Y);
 
-        if (!bCanReach || PathNodes.Num() < 2) continue; // Unreachable or already at human
+        // Path from Zombie to Human
+        if (!GridManager->FindPath(FGridNode(ZPos.X, ZPos.Y), FGridNode(HPos.X, HPos.Y), Path))
+            continue;
 
-        if (PathNodes.Num() < BestDist)
+        int32 Dist = Path.Num();
+        if (Dist < BestDist)
         {
-            BestDist = PathNodes.Num();
+            BestDist = Dist;
             Best = HPos;
-            BestPath = PathNodes;
         }
     }
 
     if (Best == FIntPoint(-1, -1)) return false;
 
-    // Convert path to FIntPoint for movement
-    TArray<FIntPoint> Path;
-    for (const FGridNode& Node : BestPath)
-    {
-        Path.Add(FIntPoint(Node.X, Node.Y));
-    }
+    // Get path
+    TArray<FGridNode> Path;
+    if (!GridManager->FindPath(FGridNode(ZPos.X, ZPos.Y), FGridNode(Best.X, Best.Y), Path))
+        return false;
 
-    // Move zombie along path (first step only or full path depending on design)
-    //Zombie->OnMoveAlongPath(Path);
+    if (Path.Num() < 2) return false;
 
-    // Bite human if adjacent
+    //MOVE ZOMBIE MOVE ZOMBIE MOVE ZOMBIE MOVE ZOMBIE MOVE ZOMBIE MOVE ZOMBIE MOVE ZOMBIE MOVE ZOMBIE MOVE ZOMBIE MOVE ZOMBIE MOVE ZOMBIE MOVE ZOMBIE 
+    //Zombie->MoveAlongPath(Path);
+
     ANonPlayerCharacters* Human = GetHumanAtGridPos(Best);
     if (Human)
     {
@@ -170,7 +176,7 @@ bool AZombieManager::TryMoveAndBite(ANonPlayerCharacters* Zombie)
         FBittenNPC B;
         B.NPC = Human;
         B.GridPos = Best;
-        B.TurnsLeft = 15;
+        B.TurnsLeft = 15; // Example
         BittenNPCs.Add(B);
     }
 

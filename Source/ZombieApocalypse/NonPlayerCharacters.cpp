@@ -66,9 +66,3 @@ void ANonPlayerCharacters::TestStateLogic()
 {
 	SetState(EState::Human);
 }
-
-FIntPoint ANonPlayerCharacters::GetLocation()
-{
-	return CurrentLocation;
-}
-
