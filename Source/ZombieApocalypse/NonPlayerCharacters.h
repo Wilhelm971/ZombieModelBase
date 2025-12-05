@@ -29,6 +29,9 @@ public:
 	UPROPERTY(EditAnywhere, Category = "NPC|Visuals")
 	USkeletalMesh* ZombieSkin;
 
+	UPROPERTY()
+	FIntPoint GridPosition;
+
 	// FUNCITONS
 	UFUNCTION()
 	void SetState(EState NewState);
