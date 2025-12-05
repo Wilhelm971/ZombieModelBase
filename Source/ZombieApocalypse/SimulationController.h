@@ -76,6 +76,15 @@ public:
 	std::vector<std::pair<float, float>> graphPts;
 	std::vector<FConveyorBatch> Conveyor;
 	float AccumulatedTime{ 0.f };
+	
+
+	void PerformSimulationStep();
+
+	// Add to public section:
+	UFUNCTION(BlueprintCallable, Category = "Simulation")
+	void AdvanceSimulationStep();
+
+	UPROPERTY(BlueprintReadOnly, Category = "Runtime Data")
 	int TimeStepsFinished{ 0 };
 
 protected:
@@ -86,5 +95,5 @@ private:
 	void ReadDataFromTableToVectors();
 	float GraphLookup(float X) const;
 	float ConveyorContent() const;
-	void PerformSimulationStep();
+	
 };
