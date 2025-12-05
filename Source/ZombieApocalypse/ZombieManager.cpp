@@ -68,7 +68,12 @@ void AZombieManager::ExecuteTurn()
 
     for (ANonPlayerCharacters* Z : ActiveZombies)
     {
+        if (AllowedBitesThisTurn <= 0) break;
+        UE_LOG(LogTemp, Warning, TEXT("Before Try And Bite"));
+
         TryMoveAndBite(Z);
+
+        AllowedBitesThisTurn--;
     }
 }
 
@@ -145,8 +150,11 @@ bool AZombieManager::TryMoveAndBite(ANonPlayerCharacters* Zombie)
         FGridNode End(HPos.X, HPos.Y);
 
         // Path from Zombie to Human
-        if (!GridManager->FindPath(FGridNode(ZPos.X, ZPos.Y), FGridNode(HPos.X, HPos.Y), Path))
+        if (!GridManager->FindPath(FGridNode(ZPos.X, ZPos.Y), FGridNode(HPos.X, HPos.Y), Path)) 
+        {
+            UE_LOG(LogTemp, Warning, TEXT("No human at target pos %d,%d"), Best.X, Best.Y);
             continue;
+        }
 
         int32 Dist = Path.Num();
         if (Dist < BestDist)
@@ -172,7 +180,7 @@ bool AZombieManager::TryMoveAndBite(ANonPlayerCharacters* Zombie)
     if (Human)
     {
         Human->SetState(EState::Bitten);
-
+        UE_LOG(LogTemp, Warning, TEXT("HumanBitten"));
         FBittenNPC B;
         B.NPC = Human;
         B.GridPos = Best;
@@ -181,4 +189,37 @@ bool AZombieManager::TryMoveAndBite(ANonPlayerCharacters* Zombie)
     }
 
     return true;
+}
+
+int32 AZombieManager::GetSusceptibleCount() const
+{
+    int32 Count = 0;
+    for (ANonPlayerCharacters* NPC : AllNPCs)
+    {
+        if (NPC && NPC->GetState() == EState::Human)
+            Count++;
+    }
+    return Count;
+}
+
+int32 AZombieManager::GetBittenCount() const
+{
+    int32 Count = 0;
+    for (const FBittenNPC& Entry : BittenNPCs)
+    {
+        if (Entry.NPC && Entry.NPC->GetState() == EState::Bitten)
+            Count++;
+    }
+    return Count;
+}
+
+int32 AZombieManager::GetZombieCount() const
+{
+    int32 Count = 0;
+    for (ANonPlayerCharacters* NPC : AllNPCs)
+    {
+        if (NPC && NPC->GetState() == EState::Zombie)
+            Count++;
+    }
+    return Count;
 }

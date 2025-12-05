@@ -165,17 +165,7 @@ void ATopDownPlayerController::NextTurn()
 
 	bFinishedTurn = false;
 	
-	// Step 1: Execute Zombie Phase
-	if (ZombieManager)
-	{
-		//ZombieManager->ExecuteZombiePhase();
-	}
-	else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("No ZombieManager found! Skipping zombie phase."));
-	}
-
-	// Step 2: Advance Simulation Step
+	// Step 1: Advance Simulation Step
 	if (SimulationController)
 	{
 		SimulationController->AdvanceSimulationStep();
@@ -184,6 +174,18 @@ void ATopDownPlayerController::NextTurn()
 	{
 		UE_LOG(LogTemp, Warning, TEXT("No SimulationController found! Skipping simulation step."));
 	}
+
+	// Step 2: Execute Zombie Phase
+	if (ZombieManager)
+	{
+		ZombieManager->ExecuteTurn();
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("No ZombieManager found! Skipping zombie phase."));
+	}
+
+	SimulationController->ReadDataFromZombieManager();
 
 	// Step 3: Check Game Conditions
 	CheckGameConditions();

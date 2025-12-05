@@ -36,12 +36,26 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     AGridManager* GridManager;
 
+    //Set by the Simulation
+    UPROPERTY()
+    int32 AllowedBitesThisTurn = 0;
+
     UFUNCTION()
     void SpawnInitialNPCs();
 
     // Called by TurnManager each turn
     UFUNCTION()
     void ExecuteTurn();
+
+    //Getters for the Simulation
+    UFUNCTION(BlueprintCallable)
+    int32 GetSusceptibleCount() const;
+
+    UFUNCTION(BlueprintCallable)
+    int32 GetBittenCount() const;
+
+    UFUNCTION(BlueprintCallable)
+    int32 GetZombieCount() const;
 
 protected:
     virtual void BeginPlay() override;
