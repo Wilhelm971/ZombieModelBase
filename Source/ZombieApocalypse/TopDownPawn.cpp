@@ -22,8 +22,8 @@ ATopDownPawn::ATopDownPawn()
 	// Create spring arm for camera positioning.
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
-	CameraBoom->TargetArmLength = 2500.f;  // Default arm length for zoom level.
-	CameraBoom->SetRelativeRotation(FRotator(-60.f, 0.f, 0.f));  // Isometric angle.
+	CameraBoom->TargetArmLength = 300.f;  // Default arm length for zoom level.
+	CameraBoom->SetRelativeRotation(FRotator(-75.f, 0.f, 0.f));  // Isometric angle.
 	CameraBoom->bDoCollisionTest = false;  // Disable collision to avoid camera clipping.
 	CameraBoom->bInheritPitch = false;
 	CameraBoom->bInheritYaw = false;

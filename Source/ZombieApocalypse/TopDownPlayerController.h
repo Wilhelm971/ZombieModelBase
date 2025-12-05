@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
 #include "InputActionValue.h"
+#include "GridManager.h"
 #include "TopDownPlayerController.generated.h"
 
 
@@ -37,12 +38,16 @@ public:
 	/** Handles camera zoom input. */
 	void HandleZoom(const FInputActionValue& Value);
 
-	// temp
-	void TestPath();
+	// functions 01
+	void DecideInteractionAction();
+	void ToggleBuildMode();
 
 	/** Cached reference to the controlled pawn (camera pawn). */
 	APawn* ControlledPawn;
 
+	// GridManager reference
+	UPROPERTY()
+	AGridManager* GridManager;
 
 	/** Input mapping context for enhanced input system. */
 	UPROPERTY(EditDefaultsOnly, Category = "Enhanced Input")
@@ -56,13 +61,17 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Enhanced Input")
 	UInputAction* ZoomAction;
 
-	// temp
+	/** Input action for build mode. */
 	UPROPERTY(EditDefaultsOnly, Category = "Enhanced Input")
-	UInputAction* TestPathAction;
+	UInputAction* BuildModeAction;
 
+	/** Input action for interaction. */
+	UPROPERTY(EditDefaultsOnly, Category = "Enhanced Input")
+	UInputAction* InteractionAction;
 
-
-
+	// === Varialbes ===
+	bool bInBuildMode = false;
+	bool bHasBuildingPoints = false;
 
 	// =============================================================
 	// CAMERA PROPERTIES
