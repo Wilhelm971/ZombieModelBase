@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "TimerManager.h"
 #include "NonPlayerCharacters.generated.h"
 
 UENUM(BlueprintType)
@@ -22,7 +23,13 @@ class ZOMBIEAPOCALYPSE_API ANonPlayerCharacters : public ACharacter
 public:
 	ANonPlayerCharacters();
 
-	// FUNCITONS
+	// FUNCTIONS
+	UFUNCTION(BlueprintCallable, Category = "NPC|Movement")
+	void MoveAlongWorldPath(const TArray<FVector>& WorldPath);
+
+	UFUNCTION()
+	bool IsMoving() const { return bIsMoving; }
+
 	UFUNCTION()
 	void SetState(EState NewState);
 
@@ -35,7 +42,7 @@ public:
 	UPROPERTY(EditAnywhere, Category = "NPC|Movement")
 	float TurnBasedMoveDuration = 1.f;
 
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "NPC|Grid")
 	FIntPoint GridPosition;
 	
 
@@ -44,9 +51,17 @@ protected:
 	virtual void Tick(float DeltaTime) override;
 
 private:
+	bool bIsMoving = false;
+	FTimerHandle MoveFinishTimer;
+	TArray<FVector> CurrentWorldPath;
+	float PathTotalLength = 0.f;
+	FVector MoveStartLocation;
+	FIntPoint MoveTargetGridPos;
 
 	// Functions
 	void UpdateMesh();
+	FVector GetPositionAlongPath(float Progress);
+	void FinishPathMove();
 
 	// Visuals
 	UPROPERTY(EditAnywhere, Category = "NPC|Visuals")
