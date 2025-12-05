@@ -22,30 +22,49 @@ class ZOMBIEAPOCALYPSE_API ANonPlayerCharacters : public ACharacter
 public:
 	ANonPlayerCharacters();
 
-	UPROPERTY(EditAnywhere, Category = "NPC|Visuals")
-	USkeletalMesh* HumanSkin;
-	UPROPERTY(EditAnywhere, Category = "NPC|Visuals")
-	USkeletalMesh* BittenSkin;
-	UPROPERTY(EditAnywhere, Category = "NPC|Visuals")
-	USkeletalMesh* ZombieSkin;
-
-	UPROPERTY()
-	FIntPoint GridPosition;
-
 	// FUNCITONS
 	UFUNCTION()
 	void SetState(EState NewState);
 
+	UFUNCTION()
 	EState GetState();
+
+	UFUNCTION(CallInEditor, Category = "EditorFunction")
+	void TestStateLogic();
+
+	UFUNCTION()
+	FIntPoint GetLocation();
 
 protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
 
 private:
-	UPROPERTY(VisibleAnywhere, Category = "NPC")
-	EState CurrentState;
-	
-	//UPROPERTY(EditAnywhere, Category = "NPC")
 
+	// Functions
+	void UpdateMesh();
+
+	// Visuals
+	UPROPERTY(EditAnywhere, Category = "NPC|Visuals")
+	USkeletalMesh* HumanSkin;
+
+	UPROPERTY(EditAnywhere, Category = "NPC|Visuals")
+	USkeletalMesh* BittenSkin;
+
+	UPROPERTY(EditAnywhere, Category = "NPC|Visuals")
+	USkeletalMesh* ZombieSkin;
+
+	// Gameplay Settings
+	UPROPERTY(VisibleAnywhere, Category = "NPC")
+	float ZombieWalkSpeed = 400.f;
+
+	UPROPERTY(EditAnywhere, Category = "NPC")
+	float AcceptanceRadius = 25.f;
+
+	// State
+	UPROPERTY()
+	FIntPoint CurrentLocation;
+
+	UPROPERTY(VisibleAnywhere, Category = "NPC")
+	EState CurrentState = EState::Human;
 };
