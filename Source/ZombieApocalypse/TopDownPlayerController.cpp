@@ -161,6 +161,7 @@ void ATopDownPlayerController::ToggleBuildMode()
 
 void ATopDownPlayerController::NextTurn()
 {
+	UE_LOG(LogTemp, Warning, TEXT("SpaceBar Pressed"));
 	if (bInBuildMode || bGameWon || bGameLost || !bFinishedTurn) return;  // Skip if building or game over
 
 	bFinishedTurn = false;
@@ -168,7 +169,7 @@ void ATopDownPlayerController::NextTurn()
 	// Step 1: Execute Zombie Phase
 	if (ZombieManager)
 	{
-		//ZombieManager->ExecuteZombiePhase();
+		ZombieManager->ExecuteTurn();
 	}
 	else
 	{
@@ -179,6 +180,7 @@ void ATopDownPlayerController::NextTurn()
 	if (SimulationController)
 	{
 		SimulationController->AdvanceSimulationStep();
+		UE_LOG(LogTemp, Warning, TEXT("Performed simulation step."));
 	}
 	else
 	{
