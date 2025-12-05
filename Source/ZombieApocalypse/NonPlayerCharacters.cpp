@@ -13,6 +13,12 @@ ANonPlayerCharacters::ANonPlayerCharacters()
 
 void ANonPlayerCharacters::SetState(EState NewState)
 {
+	CurrentState = NewState;
+}
+
+EState ANonPlayerCharacters::GetState()
+{
+	return CurrentState;
 }
 
 // Called when the game starts or when spawned

@@ -1,74 +1,81 @@
 ﻿// Copyright University of Inland Norway. All Rights Reserved.
-/*
 #pragma once
+
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "NonPlayerCharacters.h"
-#include "GridManager.h"
 #include "ZombieManager.generated.h"
 
-USTRUCT()
-struct FBittenEntry
-{
-    GENERATED_BODY()
 
-    FIntPoint GridPos;
-    ABeing* HumanActor = nullptr;
-    int32 TurnsLeft = 15;
+USTRUCT()
+struct FBittenNPC
+{
+	GENERATED_BODY()
+
+
+	FIntPoint GridPos;
+	ANonPlayerCharacters* NPC;
+	int32 TurnsLeft = 15;
 };
+
 
 UCLASS()
-class YOURGAME_API AZombieManager : public AActor
+class ZOMBIEAPOCALYPSE_API AZombieManager : public AActor
 {
-    GENERATED_BODY()
+	GENERATED_BODY()
+
 
 public:
-    AZombieManager();
+	AZombieManager();
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    TSubclassOf<ABeing> BeingClass;
 
-    UPROPERTY(BlueprintReadWrite)
-    AGridManager* GridManager;
+	virtual void Tick(float DeltaTime) override;
 
-    UPROPERTY(BlueprintReadWrite)
-    TArray<ABeing*> AllBeings;    // All humans AND zombies
 
-    UPROPERTY(EditAnywhere)
-    int32 ZombiesPerTurn = 5;
+protected:
+	virtual void BeginPlay() override;
 
-    UPROPERTY()
-    TArray<FBittenEntry> BittenList;
-
-    virtual void BeginPlay() override;
-
-    void Initialize(AGridManager* InGrid);
-
-    void SpawnInitialPopulation();
-
-    void ExecuteZombieTurn();
-
-    bool IsWinConditionMet() const;
 
 private:
+	// NPC tracking
+	UPROPERTY()
+	TArray<ANonPlayerCharacters*> AllNPCs;
 
-    // ===== Core Helpers =====
-    FVector GridToWorld(FIntPoint Grid) const;
-    FIntPoint WorldToGrid(FVector World) const;
 
-    //TArray<ABeing*> GetZombies() const;
-    TArray<FIntPoint> GetHumanPositions() const;
+	// Bitten list
+	UPROPERTY()
+	TArray<FBittenNPC> BittenNPCs;
 
-    ABeing* GetHumanAt(FIntPoint GridPos) const;
 
-    bool TryMoveAndBite(ABeing* Zombie);
+	// Config
+	UPROPERTY(EditAnywhere)
+	int32 ZombiesPerTurn = 3;
 
-    bool CanReachHuman(FIntPoint Start, FIntPoint Goal) const;
 
-    bool BuildBFSPath(FIntPoint Start, FIntPoint Goal, TArray<FIntPoint>& OutPath) const;
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<ANonPlayerCharacters> NPCClass;
 
-    void UpdateBitten();
-    void TurnHumanIntoZombie(const FBittenEntry& Data);
+
+	// Helpers
+	FIntPoint WorldToGrid(const FVector& WorldPos) const;
+	FVector GridToWorld(const FIntPoint& GridPos) const;
+
+
+	bool CanZombieReachHuman(FIntPoint Start, FIntPoint End) const;
+	TArray<FIntPoint> BuildPath(FIntPoint Start, FIntPoint Goal) const;
+
+
+	TArray<FIntPoint> GetCurrentHumanPositions() const;
+	ANonPlayerCharacters* GetHumanAtGridPos(FIntPoint Pos) const;
+
+
+	TArray<ANonPlayerCharacters*> GetShuffledZombies() const;
+
+
+	bool TryMoveAndBite(ANonPlayerCharacters* Zombie);
+
+
+	void UpdateBittenTimers();
+	void TurnHumanIntoZombie(const FBittenNPC& Data);
 };
-*/

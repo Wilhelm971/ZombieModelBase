@@ -1,232 +1,176 @@
-/*
+// ZombieManager.cpp
+
 #include "ZombieManager.h"
-#include "Kismet/KismetMathLibrary.h"
+#include "Kismet/GameplayStatics.h"
 
 AZombieManager::AZombieManager()
 {
-    PrimaryActorTick.bCanEverTick = false;
+    PrimaryActorTick.bCanEverTick = true;
 }
 
 void AZombieManager::BeginPlay()
 {
     Super::BeginPlay();
+
+    // Find all NPCs in world
+    UGameplayStatics::GetAllActorsOfClass(GetWorld(), ANonPlayerCharacters::StaticClass(), (TArray<AActor*>&)AllNPCs);
 }
 
-void AZombieManager::Initialize(AGridManager* InGrid)
+void AZombieManager::Tick(float DeltaTime)
 {
-    GridManager = InGrid;
-}
+    Super::Tick(DeltaTime);
 
-void AZombieManager::SpawnInitialPopulation()
-{
-    if (!GridManager || !BeingClass) return;
+    UpdateBittenTimers();
 
-    AllBeings.Empty();
+    // Choose zombies this turn
+    TArray<ANonPlayerCharacters*> ActiveZombies = GetShuffledZombies();
 
-    // ----- Spawn Humans -----
-    for (int32 X = 0; X < GridManager->GridSize; X++)
+    for (ANonPlayerCharacters* Z : ActiveZombies)
     {
-        for (int32 Y = 0; Y < GridManager->GridSize; Y++)
+        TryMoveAndBite(Z);
+    }
+}
+
+FIntPoint AZombieManager::WorldToGrid(const FVector& WorldPos) const
+{
+    return FIntPoint(FMath::RoundToInt(WorldPos.X / 100.f), FMath::RoundToInt(WorldPos.Y / 100.f));
+}
+
+FVector AZombieManager::GridToWorld(const FIntPoint& GridPos) const
+{
+    return FVector(GridPos.X * 100.f, GridPos.Y * 100.f, 0.f);
+}
+
+TArray<FIntPoint> AZombieManager::GetCurrentHumanPositions() const
+{
+    TArray<FIntPoint> Results;
+
+    for (ANonPlayerCharacters* NPC : AllNPCs)
+    {
+        if (NPC && NPC->GetState() == EState::Human)
         {
-            FVector SpawnLoc = GridManager->GetCellCenterWorldPos(X, Y);
-
-            ABeing* H = GetWorld()->SpawnActor<ABeing>(BeingClass, SpawnLoc, FRotator::ZeroRotator);
-            H->BeingType = EBeingType::Human;
-            H->SetGridPosition(X, Y);
-
-            AllBeings.Add(H);
+            Results.Add(WorldToGrid(NPC->GetActorLocation()));
         }
     }
 
-    // ----- Spawn 1 central zombie -----
-    int32 Mid = GridManager->GridSize / 2;
-    FVector ZLoc = GridManager->GetCellCenterWorldPos(Mid, Mid);
-
-    ABeing* Z = GetWorld()->SpawnActor<ABeing>(BeingClass, ZLoc, FRotator::ZeroRotator);
-    Z->BeingType = EBeingType::Zombie;
-    Z->SetGridPosition(Mid, Mid);
-
-    AllBeings.Add(Z);
+    return Results;
 }
 
-void AZombieManager::ExecuteZombieTurn()
+ANonPlayerCharacters* AZombieManager::GetHumanAtGridPos(FIntPoint Pos) const
 {
-    TArray<ABeing*> Zombies = GetZombies();
-    if (Zombies.Num() == 0) return;
-
-    // Shuffle
-    for (int32 i = Zombies.Num() - 1; i > 0; --i)
-        Zombies.Swap(i, FMath::RandRange(0, i));
-
-    Zombies.SetNum(FMath::Min(ZombiesPerTurn, Zombies.Num()));
-
-    for (ABeing* Z : Zombies)
-        TryMoveAndBite(Z);
-
-    UpdateBitten();
-}
-
-bool AZombieManager::IsWinConditionMet() const
-{
-    // No humans left
-    for (ABeing* B : AllBeings)
-        if (B && B->BeingType == EBeingType::Human)
-            return false;
-
-    return BittenList.Num() == 0;
-}
-
-// =============================================================
-// Helper Functions
-// =============================================================
-
-FVector AZombieManager::GridToWorld(FIntPoint Grid) const
-{
-    return GridManager->GetCellCenterWorldPos(Grid.X, Grid.Y);
-}
-
-FIntPoint AZombieManager::WorldToGrid(FVector W) const
-{
-    const float Size = GridManager->CellSize;
-    FVector L = W - GridManager->GetActorLocation();
-
-    return FIntPoint(
-        FMath::FloorToInt(L.X / Size),
-        FMath::FloorToInt(L.Y / Size)
-    );
-}
-
-TArray<ABeing*> AZombieManager::GetZombies() const
-{
-    TArray<ABeing*> Out;
-    for (ABeing* B : AllBeings)
-        if (B && B->BeingType == EBeingType::Zombie)
-            Out.Add(B);
-    return Out;
-}
-
-TArray<FIntPoint> AZombieManager::GetHumanPositions() const
-{
-    TArray<FIntPoint> Out;
-
-    for (ABeing* B : AllBeings)
+    for (ANonPlayerCharacters* NPC : AllNPCs)
     {
-        if (!B) continue;
-        if (B->BeingType != EBeingType::Human) continue;
+        if (!NPC) continue;
 
-        FIntPoint P = B->GetGridPosition();
-        Out.Add(P);
-    }
-    return Out;
-}
-
-ABeing* AZombieManager::GetHumanAt(FIntPoint Pos) const
-{
-    for (ABeing* B : AllBeings)
-    {
-        if (B && B->BeingType == EBeingType::Human)
+        if (NPC->GetState() == EState::Human)
         {
-            if (B->GetGridPosition() == Pos)
-                return B;
+            if (WorldToGrid(NPC->GetActorLocation()) == Pos)
+                return NPC;
         }
     }
     return nullptr;
 }
 
-bool AZombieManager::TryMoveAndBite(ABeing* Zombie)
+TArray<ANonPlayerCharacters*> AZombieManager::GetShuffledZombies() const
 {
-    FIntPoint ZPos = Zombie->GetGridPosition();
-    TArray<FIntPoint> Humans = GetHumanPositions();
+    TArray<ANonPlayerCharacters*> Zombies;
 
+    for (ANonPlayerCharacters* NPC : AllNPCs)
+    {
+        if (NPC && NPC->GetState() == EState::Zombie)
+            Zombies.Add(NPC);
+    }
+
+    // Shuffle
+    for (int32 i = Zombies.Num() - 1; i > 0; --i)
+    {
+        int32 j = FMath::RandRange(0, i);
+        Zombies.Swap(i, j);
+    }
+
+    Zombies.SetNum(FMath::Min(ZombiesPerTurn, Zombies.Num()));
+
+    return Zombies;
+}
+
+bool AZombieManager::CanZombieReachHuman(FIntPoint Start, FIntPoint End) const
+{
+    return true; // Placeholder for BFS reachability check
+}
+
+TArray<FIntPoint> AZombieManager::BuildPath(FIntPoint Start, FIntPoint Goal) const
+{
+    TArray<FIntPoint> Path;
+    Path.Add(Start);
+    Path.Add(Goal);
+    return Path;
+}
+
+bool AZombieManager::TryMoveAndBite(ANonPlayerCharacters* Zombie)
+{
+    TArray<FIntPoint> Humans = GetCurrentHumanPositions();
     if (Humans.Num() == 0) return false;
 
-    // Pick closest reachable target
-    FIntPoint Best = FIntPoint(-1, -1);
+    FIntPoint ZPos = WorldToGrid(Zombie->GetActorLocation());
+
+    FIntPoint Best(-1, -1);
     int32 BestDist = MAX_int32;
 
-    for (const FIntPoint& H : Humans)
+    for (FIntPoint HPos : Humans)
     {
-        if (!CanReachHuman(ZPos, H)) continue;
+        if (!CanZombieReachHuman(ZPos, HPos)) continue;
 
-        int32 D = FMath::Abs(H.X - ZPos.X) + FMath::Abs(H.Y - ZPos.Y);
-        if (D < BestDist)
+        int32 Dist = FMath::Abs(HPos.X - ZPos.X) + FMath::Abs(HPos.Y - ZPos.Y);
+
+        if (Dist < BestDist)
         {
-            BestDist = D;
-            Best = H;
+            BestDist = Dist;
+            Best = HPos;
         }
     }
 
-    if (Best.X < 0) return false;
+    if (Best == FIntPoint(-1, -1)) return false;
 
-    // Build path
-    TArray<FIntPoint> Path;
-    if (!BuildBFSPath(ZPos, Best, Path)) return false;
+    // Path
+    TArray<FIntPoint> Path = BuildPath(ZPos, Best);
+    if (Path.Num() < 2) return false;
 
-    Zombie->OnMoveAlongPath(Path);
+    // MOVE HERE MOVE HERE MOVE HERE MOVE HEREMOVE HERE MOVE HEREMOVE HERE MOVE HEREMOVE HERE MOVE HEREMOVE HERE MOVE HEREMOVE HERE MOVE HEREMOVE HERE MOVE HEREMOVE HERE MOVE HEREMOVE HERE MOVE HERE
+    //Zombie->OnMoveAlongPath(Path);
 
-    // Register bite
-    ABeing* Human = GetHumanAt(Best);
+    ANonPlayerCharacters* Human = GetHumanAtGridPos(Best);
+
     if (Human)
     {
-        FBittenEntry B;
+        Human->SetState(EState::Bitten);
+
+        FBittenNPC B;
+        B.NPC = Human;
         B.GridPos = Best;
-        B.HumanActor = Human;
         B.TurnsLeft = 15;
-        BittenList.Add(B);
+        BittenNPCs.Add(B);
     }
 
     return true;
 }
 
-bool AZombieManager::CanReachHuman(FIntPoint Start, FIntPoint Goal) const
+void AZombieManager::UpdateBittenTimers()
 {
-    return BuildBFSPath(Start, Goal, TArray<FIntPoint>());
-}
-
-bool AZombieManager::BuildBFSPath(FIntPoint Start, FIntPoint Goal, TArray<FIntPoint>& OutPath) const
-{
-    TArray<FGridNode> Path;
-    bool Found = GridManager->FindPath(
-        FGridNode(Start.X, Start.Y),
-        FGridNode(Goal.X, Goal.Y),
-        Path
-    );
-
-    if (!Found) return false;
-
-    OutPath.Empty();
-    for (auto& N : Path)
-        OutPath.Add(FIntPoint(N.X, N.Y));
-
-    return true;
-}
-
-void AZombieManager::UpdateBitten()
-{
-    for (int32 i = BittenList.Num() - 1; i >= 0; i--)
+    for (int32 i = BittenNPCs.Num() - 1; i >= 0; --i)
     {
-        if (--BittenList[i].TurnsLeft <= 0)
+        FBittenNPC& B = BittenNPCs[i];
+
+        if (--B.TurnsLeft <= 0)
         {
-            TurnHumanIntoZombie(BittenList[i]);
-            BittenList.RemoveAt(i);
+            TurnHumanIntoZombie(B);
+            BittenNPCs.RemoveAt(i);
         }
     }
 }
 
-void AZombieManager::TurnHumanIntoZombie(const FBittenEntry& Data)
+void AZombieManager::TurnHumanIntoZombie(const FBittenNPC& Data)
 {
-    if (Data.HumanActor)
-    {
-        AllBeings.Remove(Data.HumanActor);
-        Data.HumanActor->Destroy();
-    }
+    if (!Data.NPC) return;
 
-    // Spawn new zombie
-    FVector SpawnLoc = GridToWorld(Data.GridPos);
-    ABeing* Z = GetWorld()->SpawnActor<ABeing>(BeingClass, SpawnLoc, FRotator::ZeroRotator);
-    Z->BeingType = EBeingType::Zombie;
-    Z->SetGridPosition(Data.GridPos.X, Data.GridPos.Y);
-
-    AllBeings.Add(Z);
+    Data.NPC->SetState(EState::Zombie);
 }
-*/

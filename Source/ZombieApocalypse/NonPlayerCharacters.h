@@ -33,6 +33,8 @@ public:
 	UFUNCTION()
 	void SetState(EState NewState);
 
+	EState GetState();
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
