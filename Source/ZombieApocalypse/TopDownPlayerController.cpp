@@ -169,7 +169,7 @@ void ATopDownPlayerController::NextTurn()
 	// Step 1: Execute Zombie Phase
 	if (ZombieManager)
 	{
-		ZombieManager->ExecuteZombiePhase();
+		//ZombieManager->ExecuteZombiePhase();
 	}
 	else
 	{
@@ -194,21 +194,21 @@ void ATopDownPlayerController::NextTurn()
 
 void ATopDownPlayerController::CheckGameConditions()
 {
-	if (ZombieManager && ZombieManager->IsWinConditionMet())
-	{
-		bGameWon = true;
-		UE_LOG(LogTemp, Warning, TEXT("WIN! All humans safe."));
-		// TODO: Show win UI, pause input, etc. (e.g., DisableInput(this);)
-		return;
-	}
+	//if (ZombieManager && ZombieManager->IsWinConditionMet())
+	//{
+	//	bGameWon = true;
+	//	UE_LOG(LogTemp, Warning, TEXT("WIN! All humans safe."));
+	//	// TODO: Show win UI, pause input, etc. (e.g., DisableInput(this);)
+	//	return;
+	//}
 
-	if (SimulationController && SimulationController->Susceptible <= 0)
-	{
-		bGameLost = true;
-		UE_LOG(LogTemp, Error, TEXT("LOSE! No humans left."));
-		// TODO: Show lose UI, pause input, etc.
-		return;
-	}
+	//if (SimulationController && SimulationController->Susceptible <= 0)
+	//{
+	//	bGameLost = true;
+	//	UE_LOG(LogTemp, Error, TEXT("LOSE! No humans left."));
+	//	// TODO: Show lose UI, pause input, etc.
+	//	return;
+	//}
 
 	// If no win/lose, continue (e.g., increment turn counter if you add one)
 	UE_LOG(LogTemp, Log, TEXT("Turn advanced. Press Spacebar for next."));
