@@ -105,8 +105,38 @@ float ASimulationController::ConveyorContent() const
 
 void ASimulationController::PerformSimulationStep()
 {
-    // 1. - Update bitten
-    Bitten = ConveyorContent();
+    if (!ZombieManager) return;
+
+    // --- 1. Read actual world state from ZombieManager ---
+    Susceptible = ZombieManager->GetSusceptibleCount();
+    Zombies = ZombieManager->GetZombieCount();
+    Bitten = ZombieManager->GetBittenCount();
+
+    if (Susceptible <= 0 || Zombies <= 0)
+    {
+        ZombieManager->AllowedBitesThisTurn = 0;
+        return;
+    }
+
+    // --- 2. Compute auxiliary values ---
+    const float NonZombiePopulation = Susceptible + Bitten;
+    const float PopulationDensity = NonZombiePopulation / LandArea;
+    const float DensityFactor = GraphLookup(PopulationDensity / NormalPopulationDensity);
+
+    const float TotalBitesPerDay = Zombies * NormalNumberOfBites * DensityFactor;
+
+    // --- 3. Limit bites by remaining susceptible humans ---
+    const int32 AllowedBites = FMath::Clamp(FMath::RoundToInt(TotalBitesPerDay), 0, Susceptible);
+
+    // --- 4. Set the allowed bites in ZombieManager ---
+    ZombieManager->AllowedBitesThisTurn = AllowedBites;
+
+    UE_LOG(LogTemp, Log, TEXT("Simulation Step: S=%d, B=%d, Z=%d, AllowedBites=%d"), (int32)Susceptible, (int32)Bitten, (int32)Zombies, (int32)AllowedBites);
+}
+
+/*void ASimulationController::PerformSimulationStep()
+{
+    ReadDataFromZombieManager();
 
     // 2. - Auxiliaries
     const float NonZombiePopulation = Bitten + Susceptible;
@@ -124,6 +154,12 @@ void ASimulationController::PerformSimulationStep()
     // 3. - Getting bitten
     float GettingBitten = FMath::Min(BitesOnSusceptible, FMath::FloorToFloat(Susceptible));
 
+    int32 AllowedBites = FMath::RoundToInt(GettingBitten);
+    if (ZombieManager)
+    {
+        ZombieManager->AllowedBitesThisTurn = AllowedBites;
+    }
+    /*
     // 4. - CONVEYOR MECHANICS
     // 4.1 - Advance every batch
     for (FConveyorBatch& Batch : Conveyor)
@@ -164,6 +200,16 @@ void ASimulationController::PerformSimulationStep()
     Zombies = FMath::Max(0.f, Zombies + BecomingInfected);
 
     Bitten = ConveyorContent();
+}*/
+
+void ASimulationController::ReadDataFromZombieManager()
+{
+    if (ZombieManager)
+    {
+        Susceptible = ZombieManager->GetSusceptibleCount();
+        Zombies = ZombieManager->GetZombieCount();
+        Bitten = ZombieManager->GetBittenCount();
+    }
 }
 
 void ASimulationController::AdvanceSimulationStep()

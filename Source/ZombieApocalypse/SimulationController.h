@@ -1,4 +1,4 @@
-// Copyright University of Inland Norway
+//Copyright University of Inland Norway
 
 #pragma once
 
@@ -6,8 +6,8 @@
 #include "GameFramework/Actor.h"
 #include "Engine/DataTable.h"
 #include <vector>
+#include "ZombieManager.h"
 #include "SimulationController.generated.h"
-
 
 // Struct for the Unreal DataTable
 USTRUCT(BlueprintType)
@@ -36,7 +36,9 @@ class ZOMBIEAPOCALYPSE_API ASimulationController : public AActor
 public:	
 	ASimulationController();
 	virtual void Tick(float DeltaTime) override;
-
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	AZombieManager* ZombieManager;
 
 	/*=== Public for HUD ===*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Simulation Variables")
@@ -79,6 +81,8 @@ public:
 	
 
 	void PerformSimulationStep();
+
+	void ReadDataFromZombieManager();
 
 	// Add to public section:
 	UFUNCTION(BlueprintCallable, Category = "Simulation")

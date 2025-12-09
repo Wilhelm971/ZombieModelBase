@@ -161,12 +161,21 @@ void ATopDownPlayerController::ToggleBuildMode()
 
 void ATopDownPlayerController::NextTurn()
 {
-	UE_LOG(LogTemp, Warning, TEXT("SpaceBar Pressed"));
 	if (bInBuildMode || bGameWon || bGameLost || !bFinishedTurn) return;  // Skip if building or game over
 
 	bFinishedTurn = false;
 	
-	// Step 1: Execute Zombie Phase
+	// Step 1: Advance Simulation Step
+	if (SimulationController)
+	{
+		SimulationController->AdvanceSimulationStep();
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("No SimulationController found! Skipping simulation step."));
+	}
+
+	// Step 2: Execute Zombie Phase
 	if (ZombieManager)
 	{
 		ZombieManager->ExecuteTurn();
@@ -176,16 +185,7 @@ void ATopDownPlayerController::NextTurn()
 		UE_LOG(LogTemp, Warning, TEXT("No ZombieManager found! Skipping zombie phase."));
 	}
 
-	// Step 2: Advance Simulation Step
-	if (SimulationController)
-	{
-		SimulationController->AdvanceSimulationStep();
-		UE_LOG(LogTemp, Warning, TEXT("Performed simulation step."));
-	}
-	else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("No SimulationController found! Skipping simulation step."));
-	}
+	SimulationController->ReadDataFromZombieManager();
 
 	// Step 3: Check Game Conditions
 	CheckGameConditions();

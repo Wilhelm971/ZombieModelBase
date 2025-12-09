@@ -180,7 +180,7 @@ void AGridManager::TryPlaceFenceAtCurrentHover()
     HidePreview();
 
     // Debug message
-    UE_LOG(LogTemp, Log, TEXT("Fence placed! Index %d, %s"), Point.FenceIndex, Point.bIsHorizontal ? TEXT("Horizontal") : TEXT("Vertical"));
+    //UE_LOG(LogTemp, Log, TEXT("Fence placed! Index %d, %s"), Point.FenceIndex, Point.bIsHorizontal ? TEXT("Horizontal") : TEXT("Vertical"));
 }
 
 void AGridManager::GenerateBuildPoints()
@@ -300,8 +300,8 @@ bool AGridManager::IsEdgeBlockedByFence(int32 X1, int32 Y1, int32 X2, int32 Y2) 
     if (FenceIndex == INDEX_NONE)
         return true; // Not adjacent -> block (should never happen tho)
 
-    UE_LOG(LogTemp, Warning, TEXT("FENCE INDEX: %d"), (int32)FenceIndex);
-    UE_LOG(LogTemp, Warning, TEXT("X1: %d, Y1: %d, X2: %d, Y2: %d"), (int32)X1, (int32)Y1, (int32)X2, (int32)Y2);
+    //UE_LOG(LogTemp, Warning, TEXT("FENCE INDEX: %d"), (int32)FenceIndex);
+    //UE_LOG(LogTemp, Warning, TEXT("X1: %d, Y1: %d, X2: %d, Y2: %d"), (int32)X1, (int32)Y1, (int32)X2, (int32)Y2);
 
     if (X1 == X2)
     {
@@ -337,8 +337,8 @@ void AGridManager::GetNeighbors(const FGridNode& Node, TArray<FGridNode>& OutNei
 
 bool AGridManager::FindPath(const FGridNode& Start, const FGridNode& End, TArray<FGridNode>& OutPath) const
 {
-    UE_LOG(LogTemp, Warning, TEXT("FINDPATH: from (%d,%d) to (%d,%d)"),
-        Start.X, Start.Y, End.X, End.Y);
+    //UE_LOG(LogTemp, Warning, TEXT("FINDPATH: from (%d,%d) to (%d,%d)"),
+    //    Start.X, Start.Y, End.X, End.Y);
 
     if (!IsValidCell(Start.X, Start.Y) || !IsValidCell(End.X, End.Y))
         return false;
@@ -431,8 +431,8 @@ void AGridManager::DebugPathfind(FVector2D Start, FVector2D Goal)
     FString Result = bPathFound ?
         FString::Printf(TEXT("PATH FOUND! Length %d"), Path.Num()) : TEXT("NO PATH! (bug or blocked by fences");
 
-    UE_LOG(LogTemp, Warning, TEXT("DebugPathfind (%d, %d) -> (%d, %d): %s"),
-        (int32)Start.X, (int32)Start.Y, (int32)Goal.X, (int32)Goal.Y, *Result);
+    //UE_LOG(LogTemp, Warning, TEXT("DebugPathfind (%d, %d) -> (%d, %d): %s"),
+    //    (int32)Start.X, (int32)Start.Y, (int32)Goal.X, (int32)Goal.Y, *Result);
 
     // Draw fences based on what the pathfinding sees
     const FVector Offset = FVector(0, 0, 5.f);
