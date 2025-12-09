@@ -152,7 +152,7 @@ bool AZombieManager::TryMoveAndBite(ANonPlayerCharacters* Zombie)
         // Path from Zombie to Human
         if (!GridManager->FindPath(FGridNode(ZPos.X, ZPos.Y), FGridNode(HPos.X, HPos.Y), Path)) 
         {
-            UE_LOG(LogTemp, Warning, TEXT("No human at target pos %d,%d"), Best.X, Best.Y);
+            UE_LOG(LogTemp, Warning, TEXT("No path to human at %d,%d"), HPos.X, HPos.Y);
             continue;
         }
 
@@ -170,8 +170,6 @@ bool AZombieManager::TryMoveAndBite(ANonPlayerCharacters* Zombie)
     TArray<FGridNode> Path;
     if (!GridManager->FindPath(FGridNode(ZPos.X, ZPos.Y), FGridNode(Best.X, Best.Y), Path))
         return false;
-
-    if (Path.Num() < 2) return false;
 
     //MOVE ZOMBIE MOVE ZOMBIE MOVE ZOMBIE MOVE ZOMBIE MOVE ZOMBIE MOVE ZOMBIE MOVE ZOMBIE MOVE ZOMBIE MOVE ZOMBIE MOVE ZOMBIE MOVE ZOMBIE MOVE ZOMBIE 
     //Zombie->MoveAlongPath(Path);
