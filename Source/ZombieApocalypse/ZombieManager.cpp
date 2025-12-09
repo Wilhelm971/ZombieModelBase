@@ -69,7 +69,6 @@ void AZombieManager::ExecuteTurn()
     for (ANonPlayerCharacters* Z : ActiveZombies)
     {
         if (AllowedBitesThisTurn <= 0) break;
-        UE_LOG(LogTemp, Warning, TEXT("Before Try And Bite"));
 
         TryMoveAndBite(Z);
 
@@ -171,8 +170,15 @@ bool AZombieManager::TryMoveAndBite(ANonPlayerCharacters* Zombie)
     if (!GridManager->FindPath(FGridNode(ZPos.X, ZPos.Y), FGridNode(Best.X, Best.Y), Path))
         return false;
 
-    //MOVE ZOMBIE MOVE ZOMBIE MOVE ZOMBIE MOVE ZOMBIE MOVE ZOMBIE MOVE ZOMBIE MOVE ZOMBIE MOVE ZOMBIE MOVE ZOMBIE MOVE ZOMBIE MOVE ZOMBIE MOVE ZOMBIE 
-    //Zombie->MoveAlongPath(Path);
+    TArray<FVector> VPath;
+    for (auto& Node : Path)
+    {
+        FVector Location = GridManager->GetCellCenterWorldPos(Node.X, Node.Y);
+        VPath.Add(Location);
+    }
+
+    // give the zombie a movement path
+    Zombie->MoveAlongWorldPath(VPath);
 
     ANonPlayerCharacters* Human = GetHumanAtGridPos(Best);
     if (Human)
