@@ -103,14 +103,13 @@ float ASimulationController::ConveyorContent() const
     return Sum;
 }
 
+/*
 void ASimulationController::PerformSimulationStep()
 {
     if (!ZombieManager) return;
 
     // --- 1. Read actual world state from ZombieManager ---
-    Susceptible = ZombieManager->GetSusceptibleCount();
-    Zombies = ZombieManager->GetZombieCount();
-    Bitten = ZombieManager->GetBittenCount();
+    ReadDataFromZombieManager();
 
     if (Susceptible <= 0 || Zombies <= 0)
     {
@@ -133,8 +132,9 @@ void ASimulationController::PerformSimulationStep()
 
     UE_LOG(LogTemp, Log, TEXT("Simulation Step: S=%d, B=%d, Z=%d, AllowedBites=%d"), (int32)Susceptible, (int32)Bitten, (int32)Zombies, (int32)AllowedBites);
 }
+*/
 
-/*void ASimulationController::PerformSimulationStep()
+void ASimulationController::PerformSimulationStep()
 {
     ReadDataFromZombieManager();
 
@@ -155,11 +155,9 @@ void ASimulationController::PerformSimulationStep()
     float GettingBitten = FMath::Min(BitesOnSusceptible, FMath::FloorToFloat(Susceptible));
 
     int32 AllowedBites = FMath::RoundToInt(GettingBitten);
-    if (ZombieManager)
-    {
-        ZombieManager->AllowedBitesThisTurn = AllowedBites;
-    }
-    /*
+
+    UE_LOG(LogTemp, Log, TEXT("Simulation Step: S=%d, B=%d, Z=%d, AllowedBites=%d"), (int32)Susceptible, (int32)Bitten, (int32)Zombies, (int32)AllowedBites);
+    
     // 4. - CONVEYOR MECHANICS
     // 4.1 - Advance every batch
     for (FConveyorBatch& Batch : Conveyor)
@@ -187,6 +185,14 @@ void ASimulationController::PerformSimulationStep()
     const float FreeCapacity = FMath::Max(0.f, BittenCapacity - CurrentContent);
     const float InflowPeople = FMath::Max(0.f, FMath::Min(GettingBitten, FreeCapacity));
 
+    AllowedBites = FMath::RoundToInt(InflowPeople);
+    if (ZombieManager)
+    {
+        ZombieManager->AllowedBitesThisTurn = AllowedBites;
+    }
+
+    UE_LOG(LogTemp, Log, TEXT("Simulation Step: S=%d, B=%d, Z=%d, AllowedBites=%d"), (int32)Susceptible, (int32)Bitten, (int32)Zombies, (int32)AllowedBites);
+
     if (InflowPeople > 0.f)
     {
         Conveyor.push_back({ InflowPeople, DaysToBecomeInfectedFromBite });
@@ -200,7 +206,7 @@ void ASimulationController::PerformSimulationStep()
     Zombies = FMath::Max(0.f, Zombies + BecomingInfected);
 
     Bitten = ConveyorContent();
-}*/
+}
 
 void ASimulationController::ReadDataFromZombieManager()
 {
