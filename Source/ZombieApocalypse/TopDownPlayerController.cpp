@@ -64,6 +64,21 @@ void ATopDownPlayerController::BeginPlay()
 	{
 		UE_LOG(LogTemp, Warning, TEXT("TDPC: No grid manager found! Build system broken!"))
 	}
+
+	// WIDGET STUFF
+	if (MainHUDClass)
+	{
+		MainHUD = CreateWidget<UMainHUDWidget>(this, MainHUDClass);
+		if (MainHUD)
+		{
+			MainHUD->AddToViewport();
+			MainHUD->SetDays(0);
+			MainHUD->SetHumans(0);
+			MainHUD->SetBitten(0);
+			MainHUD->SetZombies(0);
+			MainHUD->SetResources(0);
+		}
+	}
 }
 
 void ATopDownPlayerController::SetupInputComponent()
@@ -188,6 +203,8 @@ void ATopDownPlayerController::NextTurn()
 	// Step 3: Check Game Conditions
 	CheckGameConditions();
 
+	// Update HUD
+	UpdateHUD();
 
 	GridManager->CurrentCoins += 30;
 	bFinishedTurn = true;
@@ -200,6 +217,19 @@ void ATopDownPlayerController::CheckGameConditions()
 		bGameWon = true;
 		UE_LOG(LogTemp, Warning, TEXT("WIN! All humans safe."));
 		// TODO: Show win UI, pause input, etc. (e.g., DisableInput(this);)
+
+		if (EndGameClass)
+		{
+			EndGameWidget = CreateWidget<UEndGameWidget>(this, EndGameClass);
+			if (EndGameWidget)
+			{
+				EndGameWidget->AddToViewport();
+				this->SetPause(true);
+				EndGameWidget->SetText(FText::FromString(TEXT("Victory")));
+				EndGameWidget->SetScore(0); // calc the real score??
+			}
+		}
+
 		return;
 	}
 
@@ -208,6 +238,19 @@ void ATopDownPlayerController::CheckGameConditions()
 		bGameLost = true;
 		UE_LOG(LogTemp, Error, TEXT("LOSE! No humans left."));
 		// TODO: Show lose UI, pause input, etc.
+
+		if (EndGameClass)
+		{
+			EndGameWidget = CreateWidget<UEndGameWidget>(this, EndGameClass);
+			if (EndGameWidget)
+			{
+				EndGameWidget->AddToViewport();
+				this->SetPause(true);
+				EndGameWidget->SetText(FText::FromString(TEXT("You're Trash")));
+				EndGameWidget->SetScore(0); // calc the real score??
+			}
+		}
+
 		return;
 	}
 
@@ -215,3 +258,21 @@ void ATopDownPlayerController::CheckGameConditions()
 	UE_LOG(LogTemp, Log, TEXT("Turn advanced. Press Spacebar for next."));
 }
 
+void ATopDownPlayerController::UpdateHUD()
+{
+	if (MainHUD)
+	{
+		int32 Days = SimulationController->TimeStepsFinished;
+		int32 Zombies = ZombieManager->GetZombieCount();
+		int32 Bitten = ZombieManager->GetBittenCount();
+		int32 Humans = ZombieManager->GetSusceptibleCount();
+		int32 Gold = GridManager->CurrentCoins;
+
+		// Upate info
+		MainHUD->SetDays(Days);
+		MainHUD->SetHumans(Humans);
+		MainHUD->SetBitten(Bitten);
+		MainHUD->SetZombies(Zombies);
+		MainHUD->SetResources(Gold);
+	}
+}

@@ -8,18 +8,14 @@
 #include "GridManager.h"
 #include "SimulationController.h"
 #include "ZombieManager.h"
+#include "MainHUDWidget.h"
+#include "EndGameWidget.h"
 #include "TopDownPlayerController.generated.h"
-
-
 
 class UInputMappingContext;
 class UInputAction;
 class APawn;
 
-
-/**
- * 
- */
 UCLASS()
 class ZOMBIEAPOCALYPSE_API ATopDownPlayerController : public APlayerController
 {
@@ -116,8 +112,22 @@ public:
 	/** Target arm length for smooth zooming interpolation. */
 	float TargetArmLength = 2500.0f;
 
+
+	// WIDGET RELATED STUFF
+	UPROPERTY(EditAnywhere, Category = "UI")
+	TSubclassOf<class UUserWidget> MainHUDClass;
+
+	UPROPERTY(EditAnywhere, Category = "UI")
+	TSubclassOf<class UUserWidget> EndGameClass;
+
 private:
 	void CheckGameConditions();
 
 	bool bFinishedTurn = true;
+
+	// WIDGET STUFF
+	void UpdateHUD();
+
+	UMainHUDWidget* MainHUD;
+	UEndGameWidget* EndGameWidget;
 };
