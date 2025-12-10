@@ -40,8 +40,23 @@ public:
     UPROPERTY()
     int32 AllowedBitesThisTurn = 0;
 
+    UPROPERTY()
+    bool bWinCon;
+
+    UPROPERTY()
+    bool bLoseCon;
+
     UFUNCTION()
     void SpawnInitialNPCs();
+
+    UFUNCTION()
+    bool IsWinConditionMet();
+
+    UFUNCTION()
+    void CheckWinCondition();
+
+    UFUNCTION()
+    TArray<ANPC*> GetAllPotentialZombies();
 
     // Called by TurnManager each turn
     UFUNCTION()

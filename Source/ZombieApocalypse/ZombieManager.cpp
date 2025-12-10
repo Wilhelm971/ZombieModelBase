@@ -60,6 +60,55 @@ void AZombieManager::SpawnInitialNPCs()
     }
 }
 
+bool AZombieManager::IsWinConditionMet()
+{
+    return bWinCon;
+}
+
+void AZombieManager::CheckWinCondition()
+{
+    // Get all human positions
+    TArray<FIntPoint> HumanPositions = GetCurrentHumanPositions();
+    if (HumanPositions.Num() == 0) return; // No humans left
+
+    TArray<ANPC*> AllZombies = GetAllPotentialZombies();
+
+    // Check if any zombie can path to a human
+    for (ANPC* Zombie : AllZombies)
+    {
+        if (!Zombie) continue;
+
+        const FIntPoint ZPos = Zombie->GridPoint;
+
+        for (const FIntPoint& HPos : HumanPositions)
+        {
+            TArray<FGridNode> Path;
+            if (GridManager->FindPath(FGridNode(ZPos.X, ZPos.Y), FGridNode(HPos.X, HPos.Y), Path))
+            {
+                // At least one zombie can reach a human
+                return;
+            }
+        }
+    }
+
+    // No zombies can reach any human
+    bWinCon = true;
+}
+
+TArray<ANPC*> AZombieManager::GetAllPotentialZombies()
+{
+    TArray<ANPC*> AllZombies;
+    for (ANPC* NPC : AllNPCs)
+    {
+        if (NPC->GetState() == EState::Zombie || NPC->GetState() == EState::Bitten)
+        {
+            AllZombies.Add(NPC);
+        }
+    }
+
+    return AllZombies;
+}
+
 void AZombieManager::ExecuteTurn()
 {
     UpdateBittenTimers();
@@ -74,6 +123,7 @@ void AZombieManager::ExecuteTurn()
 
         AllowedBitesThisTurn--;
     }
+    CheckWinCondition();
 }
 
 void AZombieManager::UpdateBittenTimers()
@@ -151,7 +201,6 @@ bool AZombieManager::TryMoveAndBite(ANPC* Zombie)
         // Path from Zombie to Human
         if (!GridManager->FindPath(FGridNode(ZPos.X, ZPos.Y), FGridNode(HPos.X, HPos.Y), Path)) 
         {
-            UE_LOG(LogTemp, Warning, TEXT("No path to human at %d,%d"), HPos.X, HPos.Y);
             continue;
         }
 
@@ -178,8 +227,8 @@ bool AZombieManager::TryMoveAndBite(ANPC* Zombie)
     }
 
     // set the new postion
-    FGridNode _ = Path[Path.Num() - 1];
-    Zombie->GridPoint = FIntPoint(_.X, _.Y);
+    FGridNode LastNode = Path[Path.Num() - 1];
+    Zombie->GridPoint = FIntPoint(LastNode.X, LastNode.Y);
 
     // give the zombie a movement path
     Zombie->MoveAlongWorldPath(VPath);
