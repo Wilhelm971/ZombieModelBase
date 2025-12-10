@@ -190,6 +190,8 @@ void ATopDownPlayerController::NextTurn()
 	// Step 3: Check Game Conditions
 	CheckGameConditions();
 
+
+	GridManager->CurrentCoins += 30;
 	bFinishedTurn = true;
 }
 
