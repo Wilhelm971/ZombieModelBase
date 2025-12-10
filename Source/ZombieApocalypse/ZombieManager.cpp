@@ -186,7 +186,7 @@ bool AZombieManager::TryMoveAndBite(ANPC* Zombie)
 
     FIntPoint ZPos = Zombie->GridPoint;
 
-    FIntPoint Best(-1, -1);
+    TArray<FIntPoint> ClosestHumans;
     int32 BestDist = MAX_int32;
 
     for (FIntPoint HPos : Humans)
@@ -205,11 +205,19 @@ bool AZombieManager::TryMoveAndBite(ANPC* Zombie)
         if (Dist < BestDist)
         {
             BestDist = Dist;
-            Best = HPos;
+            ClosestHumans.Empty();
+            ClosestHumans.Add(HPos);
+        }
+        else if (Dist == BestDist)
+        {
+            ClosestHumans.Add(HPos);
         }
     }
 
-    if (Best == FIntPoint(-1, -1)) return false;
+    if (ClosestHumans.Num() == 0) return false;
+
+    int32 RandIndex = FMath::RandRange(0, ClosestHumans.Num() - 1);
+    FIntPoint Best = ClosestHumans[RandIndex];
 
     // Get path
     TArray<FGridNode> Path;
