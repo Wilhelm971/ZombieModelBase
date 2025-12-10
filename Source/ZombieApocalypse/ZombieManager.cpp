@@ -35,6 +35,7 @@ void AZombieManager::SpawnInitialNPCs()
             if (Human)
             {
                 Human->GridPoint = FIntPoint(X, Y);
+                Human->ZombieManager = this;
 
                 GridManager->Grid[Y * GridSizeX + X].bHasHuman = true;
                 AllNPCs.Add(Human);
@@ -51,6 +52,7 @@ void AZombieManager::SpawnInitialNPCs()
     {
         Zombie->SetState(EState::Zombie);
         Zombie->GridPoint = FIntPoint(CenterX, CenterY);
+        Zombie->ZombieManager = this;
 
         AllNPCs.Add(Zombie);
     }
@@ -58,11 +60,6 @@ void AZombieManager::SpawnInitialNPCs()
     {
         UE_LOG(LogTemp, Warning, TEXT("No Zombie"));
     }
-}
-
-bool AZombieManager::IsWinConditionMet()
-{
-    return bWinCon;
 }
 
 void AZombieManager::CheckWinCondition()
@@ -247,6 +244,23 @@ bool AZombieManager::TryMoveAndBite(ANPC* Zombie)
 
     return true;
 }
+
+void AZombieManager::NotifyZombieStartedMoving()
+{
+    ActiveMovingZombies++;
+    bZombiesAreMoving = true;
+}
+
+void AZombieManager::NotifyZombieFinishedMoving()
+{
+    ActiveMovingZombies = FMath::Max(0, ActiveMovingZombies - 1);
+
+    if (ActiveMovingZombies == 0)
+    {
+        bZombiesAreMoving = false;
+    }
+}
+
 
 int32 AZombieManager::GetSusceptibleCount() const
 {

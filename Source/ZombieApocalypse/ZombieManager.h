@@ -1,4 +1,6 @@
-﻿#pragma once
+﻿//Copyright University of Inland Norway
+
+#pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
@@ -40,17 +42,11 @@ public:
     UPROPERTY()
     int32 AllowedBitesThisTurn = 0;
 
-    UPROPERTY()
-    bool bWinCon;
-
-    UPROPERTY()
-    bool bLoseCon;
-
     UFUNCTION()
     void SpawnInitialNPCs();
 
     UFUNCTION()
-    bool IsWinConditionMet();
+    bool IsWinConditionMet() const { return bWinCon; };
 
     UFUNCTION()
     void CheckWinCondition();
@@ -62,6 +58,8 @@ public:
     UFUNCTION()
     void ExecuteTurn();
 
+    bool AreZombiesMoving() const { return bZombiesAreMoving; }
+
     //Getters for the Simulation
     UFUNCTION(BlueprintCallable)
     int32 GetSusceptibleCount() const;
@@ -72,6 +70,12 @@ public:
     UFUNCTION(BlueprintCallable)
     int32 GetZombieCount() const;
 
+    UFUNCTION()
+    void NotifyZombieStartedMoving();
+
+    UFUNCTION()
+    void NotifyZombieFinishedMoving();
+
 protected:
     virtual void BeginPlay() override;
 
@@ -81,6 +85,14 @@ private:
 
     UPROPERTY()
     TArray<FBittenNPC> BittenNPCs;
+
+    UPROPERTY()
+    bool bZombiesAreMoving = false;
+
+    int32 ActiveMovingZombies = 0;
+
+    UPROPERTY()
+    bool bWinCon;
 
     // Turn-based helpers
     void UpdateBittenTimers();

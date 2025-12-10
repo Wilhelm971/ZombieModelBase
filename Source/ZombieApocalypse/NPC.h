@@ -7,6 +7,8 @@
 #include "TimerManager.h"
 #include "NPC.generated.h"
 
+class AZombieManager;
+
 UENUM(BlueprintType)
 enum class EState : uint8
 {
@@ -48,6 +50,10 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	class USkeletalMeshComponent* SkeletalMeshComponent;
+
+	// Reference 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	AZombieManager* ZombieManager;
 
 protected:
 	virtual void BeginPlay() override;

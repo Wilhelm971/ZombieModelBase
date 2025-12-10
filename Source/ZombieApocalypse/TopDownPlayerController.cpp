@@ -161,7 +161,7 @@ void ATopDownPlayerController::ToggleBuildMode()
 
 void ATopDownPlayerController::NextTurn()
 {
-	if (bInBuildMode || bGameWon || bGameLost || !bFinishedTurn) return;  // Skip if building or game over
+	if (bInBuildMode || bGameWon || bGameLost || !bFinishedTurn || ZombieManager->AreZombiesMoving()) return;  // Skip if building or game over
 
 	bFinishedTurn = false;
 	

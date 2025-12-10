@@ -3,6 +3,7 @@
 #include "NPC.h"
 #include "Components/SceneComponent.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "ZombieManager.h"
 
 
 ANPC::ANPC()
@@ -158,6 +159,10 @@ void ANPC::FinishPathMove()
 	UE_LOG(LogTemp, Log, TEXT("NPC %s: Finish move to %s"), *GetName(), *CurrentWorldPath.Last().ToString());
 
 	bIsMoving = false;
+	if (ZombieManager)
+	{
+		ZombieManager->NotifyZombieFinishedMoving();
+	}
 	CurrentWorldPath.Empty();
 	PathTotalLength = 0.f;
 }
@@ -173,6 +178,11 @@ void ANPC::MoveAlongWorldPath(const TArray<FVector>& WorldPath)
 	}
 
 	bIsMoving = true;
+	// Tell ZombieManager a zombie started moving
+	if (ZombieManager)
+	{
+		ZombieManager->NotifyZombieStartedMoving();
+	}
 	CurrentWorldPath = WorldPath;
 	CurrentPathSegmentIndex = 1;
 	MoveStartLocation = GetActorLocation();
