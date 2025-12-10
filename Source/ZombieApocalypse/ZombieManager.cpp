@@ -188,7 +188,7 @@ bool AZombieManager::TryMoveAndBite(ANonPlayerCharacters* Zombie)
         FBittenNPC B;
         B.NPC = Human;
         B.GridPos = Best;
-        B.TurnsLeft = 15; // Example
+        B.TurnsLeft = 15;
         BittenNPCs.Add(B);
     }
 
