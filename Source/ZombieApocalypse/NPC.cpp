@@ -90,7 +90,7 @@ void ANPC::UpdateMesh()
 	case EState::Zombie:
 		TargetMesh = ZombieSkin;
 		NewScale = FVector(0.3f);
-		NewRotation = FRotator(0.f, 90.f, 0.f);
+		NewRotation = FRotator(0.f, -90.f, 0.f);
 		NewLocation = FVector(0.f, 0.f, 0.f);
 		break;
 
@@ -174,6 +174,7 @@ void ANPC::MoveAlongWorldPath(const TArray<FVector>& WorldPath)
 
 	bIsMoving = true;
 	CurrentWorldPath = WorldPath;
+	CurrentPathSegmentIndex = 1;
 	MoveStartLocation = GetActorLocation();
 	MoveTargetGridPos = WorldPath[WorldPath.Num() - 1];
 
