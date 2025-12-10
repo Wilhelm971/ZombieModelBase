@@ -60,6 +60,7 @@ private:
 	float PathTotalLength = 0.f;
 	FVector MoveStartLocation;
 	FVector MoveTargetGridPos;
+	int32 CurrentPathSegmentIndex = 0;
 
 	// functions
 	void UpdateMesh();

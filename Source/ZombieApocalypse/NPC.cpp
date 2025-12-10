@@ -39,7 +39,7 @@ void ANPC::Tick(float DeltaTime)
 		return;
 	}
 
-	float Progress = FMath::Clamp(Elapsed / TurnBasedMoveDuration, 0.1f, 0.1f);
+	float Progress = FMath::Clamp(Elapsed / TurnBasedMoveDuration, 0.f, 1.f);
 
 	FVector NewPos = GetPositionAlongPath(Progress);
 	bool bMoved = SetActorLocation(NewPos, false); // false = teleport
@@ -49,11 +49,29 @@ void ANPC::Tick(float DeltaTime)
 		return;
 	}
 
-	// Face direction of movement
-	FVector Dir = (NewPos - GetActorLocation()).GetSafeNormal();
-	if (!Dir.IsNearlyZero(0.0f))
+	// Smooth rotation: Use current path segment direction
+	if (CurrentWorldPath.Num() > 1 && CurrentPathSegmentIndex < CurrentWorldPath.Num())
 	{
-		SetActorRotation(Dir.Rotation());
+		FVector SegmentStart = CurrentWorldPath[CurrentPathSegmentIndex - 1];
+		FVector SegmentEnd = CurrentWorldPath[CurrentPathSegmentIndex];
+		FVector SegmentDir = (SegmentEnd - SegmentStart).GetSafeNormal();
+
+		if (!SegmentDir.IsNearlyZero(0.001f))
+		{
+			FRotator TargetRot = SegmentDir.Rotation();
+
+			// Smooth lerp (no pop)
+			FRotator CurrentRot = GetActorRotation();
+			FRotator NewRot = FMath::RInterpTo(CurrentRot, TargetRot, DeltaTime, 8.f); // fast interp
+			SetActorRotation(NewRot);
+		}
+
+		// Advance segment if past midpoint of it.
+		float SegmentProgress = FVector::Dist(GetActorLocation(), SegmentStart) / FVector::Dist(SegmentStart, SegmentEnd);
+		if (SegmentProgress > 0.5f && CurrentPathSegmentIndex < CurrentWorldPath.Num() - 1)
+		{
+			CurrentPathSegmentIndex++;
+		}
 	}
 }
 
@@ -131,7 +149,12 @@ FVector ANPC::GetPositionAlongPath(float Progress)
 
 void ANPC::FinishPathMove()
 {
-	SetActorLocation(CurrentWorldPath.Last(), false);
+	bool bCheck = SetActorLocation(CurrentWorldPath.Last(), true);
+	if (!bCheck)
+	{
+		UE_LOG(LogTemp, Log, TEXT("NPC %s: SetActorLocaiton is FALSE"), *GetName());
+	}
+
 	UE_LOG(LogTemp, Log, TEXT("NPC %s: Finish move to %s"), *GetName(), *CurrentWorldPath.Last().ToString());
 
 	bIsMoving = false;
