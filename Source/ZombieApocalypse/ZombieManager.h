@@ -2,7 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "NonPlayerCharacters.h"
+#include "NPC.h"
 #include "GridManager.h"
 #include "ZombieManager.generated.h"
 
@@ -12,7 +12,7 @@ struct FBittenNPC
     GENERATED_BODY()
 
     UPROPERTY()
-    ANonPlayerCharacters* NPC;
+    ANPC* NPC;
 
     UPROPERTY()
     FIntPoint GridPos;
@@ -31,7 +31,7 @@ public:
 
     // Reference to NPC class for spawning all units
     UPROPERTY(EditAnywhere, Category = "Zombies")
-    TSubclassOf<ANonPlayerCharacters> NPCClass;
+    TSubclassOf<ANPC> NPCClass;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     AGridManager* GridManager;
@@ -62,15 +62,15 @@ protected:
 
 private:
     UPROPERTY()
-    TArray<ANonPlayerCharacters*> AllNPCs;
+    TArray<ANPC*> AllNPCs;
 
     UPROPERTY()
     TArray<FBittenNPC> BittenNPCs;
 
     // Turn-based helpers
     void UpdateBittenTimers();
-    bool TryMoveAndBite(ANonPlayerCharacters* Zombie);
-    TArray<ANonPlayerCharacters*> GetShuffledZombies() const;
+    bool TryMoveAndBite(ANPC* Zombie);
+    TArray<ANPC*> GetShuffledZombies() const;
     TArray<FIntPoint> GetCurrentHumanPositions() const;
-    ANonPlayerCharacters* GetHumanAtGridPos(const FIntPoint& Pos) const;
+    ANPC* GetHumanAtGridPos(const FIntPoint& Pos) const;
 };

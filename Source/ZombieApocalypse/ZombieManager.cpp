@@ -31,10 +31,10 @@ void AZombieManager::SpawnInitialNPCs()
         for (int32 Y = 0; Y < GridSizeY; ++Y)
         {
             FVector SpawnPos = GridManager->GetCellCenterWorldPos(X, Y);
-            ANonPlayerCharacters* Human = GetWorld()->SpawnActor<ANonPlayerCharacters>(NPCClass, SpawnPos, FRotator::ZeroRotator, SpawnParams);
+            ANPC* Human = GetWorld()->SpawnActor<ANPC>(NPCClass, SpawnPos, FRotator::ZeroRotator, SpawnParams);
             if (Human)
             {
-                Human->GridPosition = FIntPoint(X, Y);
+                Human->GridPoint = FIntPoint(X, Y);
 
                 GridManager->Grid[Y * GridSizeX + X].bHasHuman = true;
                 AllNPCs.Add(Human);
@@ -46,11 +46,11 @@ void AZombieManager::SpawnInitialNPCs()
     int32 CenterX = 5;
     int32 CenterY = 5;
     FVector ZombieSpawnPos = GridManager->GetCellCenterWorldPos(CenterX, CenterY);
-    ANonPlayerCharacters* Zombie = GetWorld()->SpawnActor<ANonPlayerCharacters>(NPCClass, ZombieSpawnPos, FRotator::ZeroRotator, SpawnParams);
+    ANPC* Zombie = GetWorld()->SpawnActor<ANPC>(NPCClass, ZombieSpawnPos, FRotator::ZeroRotator, SpawnParams);
     if (Zombie)
     {
         Zombie->SetState(EState::Zombie);
-        Zombie->GridPosition = FIntPoint(CenterX, CenterY);
+        Zombie->GridPoint = FIntPoint(CenterX, CenterY);
 
         AllNPCs.Add(Zombie);
     }
@@ -64,9 +64,9 @@ void AZombieManager::ExecuteTurn()
 {
     UpdateBittenTimers();
 
-    TArray<ANonPlayerCharacters*> ActiveZombies = GetShuffledZombies();
+    TArray<ANPC*> ActiveZombies = GetShuffledZombies();
 
-    for (ANonPlayerCharacters* Z : ActiveZombies)
+    for (ANPC* Z : ActiveZombies)
     {
         if (AllowedBitesThisTurn <= 0) break;
 
@@ -91,10 +91,10 @@ void AZombieManager::UpdateBittenTimers()
     }
 }
 
-TArray<ANonPlayerCharacters*> AZombieManager::GetShuffledZombies() const
+TArray<ANPC*> AZombieManager::GetShuffledZombies() const
 {
-    TArray<ANonPlayerCharacters*> Zombies;
-    for (ANonPlayerCharacters* NPC : AllNPCs)
+    TArray<ANPC*> Zombies;
+    for (ANPC* NPC : AllNPCs)
     {
         if (NPC && NPC->GetState() == EState::Zombie)
             Zombies.Add(NPC);
@@ -112,32 +112,32 @@ TArray<ANonPlayerCharacters*> AZombieManager::GetShuffledZombies() const
 TArray<FIntPoint> AZombieManager::GetCurrentHumanPositions() const
 {
     TArray<FIntPoint> Humans;
-    for (ANonPlayerCharacters* NPC : AllNPCs)
+    for (ANPC* NPC : AllNPCs)
     {
         if (NPC && NPC->GetState() == EState::Human)
-            Humans.Add(NPC->GridPosition);
+            Humans.Add(NPC->GridPoint);
     }
     return Humans;
 }
 
-ANonPlayerCharacters* AZombieManager::GetHumanAtGridPos(const FIntPoint& Pos) const
+ANPC* AZombieManager::GetHumanAtGridPos(const FIntPoint& Pos) const
 {
-    for (ANonPlayerCharacters* NPC : AllNPCs)
+    for (ANPC* NPC : AllNPCs)
     {
-        if (NPC && NPC->GetState() == EState::Human && NPC->GridPosition == Pos)
+        if (NPC && NPC->GetState() == EState::Human && NPC->GridPoint == Pos)
             return NPC;
     }
     return nullptr;
 }
 
-bool AZombieManager::TryMoveAndBite(ANonPlayerCharacters* Zombie)
+bool AZombieManager::TryMoveAndBite(ANPC* Zombie)
 {
     if (!GridManager || !Zombie) return false;
 
     TArray<FIntPoint> Humans = GetCurrentHumanPositions();
     if (Humans.Num() == 0) return false;
 
-    FIntPoint ZPos = Zombie->GridPosition;
+    FIntPoint ZPos = Zombie->GridPoint;
 
     FIntPoint Best(-1, -1);
     int32 BestDist = MAX_int32;
@@ -177,10 +177,14 @@ bool AZombieManager::TryMoveAndBite(ANonPlayerCharacters* Zombie)
         VPath.Add(Location);
     }
 
+    // set the new postion
+    FGridNode _ = Path[Path.Num() - 1];
+    Zombie->GridPoint = FIntPoint(_.X, _.Y);
+
     // give the zombie a movement path
     Zombie->MoveAlongWorldPath(VPath);
 
-    ANonPlayerCharacters* Human = GetHumanAtGridPos(Best);
+    ANPC* Human = GetHumanAtGridPos(Best);
     if (Human)
     {
         Human->SetState(EState::Bitten);
@@ -198,7 +202,7 @@ bool AZombieManager::TryMoveAndBite(ANonPlayerCharacters* Zombie)
 int32 AZombieManager::GetSusceptibleCount() const
 {
     int32 Count = 0;
-    for (ANonPlayerCharacters* NPC : AllNPCs)
+    for (ANPC* NPC : AllNPCs)
     {
         if (NPC && NPC->GetState() == EState::Human)
             Count++;
@@ -220,7 +224,7 @@ int32 AZombieManager::GetBittenCount() const
 int32 AZombieManager::GetZombieCount() const
 {
     int32 Count = 0;
-    for (ANonPlayerCharacters* NPC : AllNPCs)
+    for (ANPC* NPC : AllNPCs)
     {
         if (NPC && NPC->GetState() == EState::Zombie)
             Count++;
