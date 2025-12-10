@@ -3,9 +3,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/Character.h"
+#include "GameFramework/Pawn.h"
 #include "TimerManager.h"
-#include "NonPlayerCharacters.generated.h"
+#include "NPC.generated.h"
 
 UENUM(BlueprintType)
 enum class EState : uint8
@@ -16,14 +16,14 @@ enum class EState : uint8
 };
 
 UCLASS()
-class ZOMBIEAPOCALYPSE_API ANonPlayerCharacters : public ACharacter
+class ZOMBIEAPOCALYPSE_API ANPC : public APawn
 {
 	GENERATED_BODY()
 
 public:
-	ANonPlayerCharacters();
+	ANPC();
 
-	// FUNCTIONS
+	// Functions
 	UFUNCTION(BlueprintCallable, Category = "NPC|Movement")
 	void MoveAlongWorldPath(const TArray<FVector>& WorldPath);
 
@@ -36,29 +36,32 @@ public:
 	UFUNCTION()
 	EState GetState();
 
-	UFUNCTION(CallInEditor, Category = "EditorFunction")
-	void TestStateLogic();
-
-	UPROPERTY(EditAnywhere, Category = "NPC|Movement")
-	float TurnBasedMoveDuration = 1.f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NPC|Movement")
+	float TurnBasedMoveDuration = 1.0f;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "NPC|Grid")
-	FIntPoint GridPosition;
-	
+	FIntPoint GridPoint;
+
+	// Components
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	class USceneComponent* RootSceneComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	class USkeletalMeshComponent* SkeletalMeshComponent;
 
 protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
 
-private:
+private:	
 	bool bIsMoving = false;
 	FTimerHandle MoveFinishTimer;
 	TArray<FVector> CurrentWorldPath;
 	float PathTotalLength = 0.f;
 	FVector MoveStartLocation;
-	FIntPoint MoveTargetGridPos;
+	FVector MoveTargetGridPos;
 
-	// Functions
+	// functions
 	void UpdateMesh();
 	FVector GetPositionAlongPath(float Progress);
 	void FinishPathMove();
