@@ -21,6 +21,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Functions")
 	void SetScore(int32 Score);
 
+protected:
+	// Configurable level to lead (set in BP)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Menu")
+	FName LevelToLoad = NAME_None;
+
 private:
 	virtual void NativeConstruct() override;
 

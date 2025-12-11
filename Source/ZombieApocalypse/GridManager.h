@@ -100,7 +100,7 @@ public:
 
 
     int32 CurrentCoins;
-    int32 BuildCost = 25;
+    int32 BuildCost = 10;
     static constexpr int32 GridSize = 10;
 
     // Cell info

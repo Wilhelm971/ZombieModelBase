@@ -77,7 +77,11 @@ void ATopDownPlayerController::BeginPlay()
 			MainHUD->SetBitten(0);
 			MainHUD->SetZombies(0);
 			MainHUD->SetResources(0);
+
+			// update stats
+			UpdateHUD();
 		}
+		
 	}
 }
 
@@ -147,6 +151,7 @@ void ATopDownPlayerController::DecideInteractionAction()
 	if (bInBuildMode && GridManager)
 	{
 		GridManager->TryPlaceFenceAtCurrentHover();
+		UpdateHUD();
 	}
 	else if (!bInBuildMode && GridManager && bHasBuildingPoints)
 	{
@@ -169,6 +174,10 @@ void ATopDownPlayerController::ToggleBuildMode()
 		GridManager->EnterBuildMode();
 	else
 		GridManager->ExitBuildMode();
+
+	const FString ModeText = bInBuildMode ? TEXT("BuildMode") : TEXT("");
+
+	MainHUD->SetMode(FText::FromString(ModeText));
 
 	UE_LOG(LogTemp, Log, TEXT("BuildMode = %s"), bInBuildMode ? TEXT("ON") : TEXT("OFF"));
 }
@@ -203,10 +212,11 @@ void ATopDownPlayerController::NextTurn()
 	// Step 3: Check Game Conditions
 	CheckGameConditions();
 
+	GridManager->CurrentCoins += 10;
+
 	// Update HUD
 	UpdateHUD();
 
-	GridManager->CurrentCoins += 30;
 	bFinishedTurn = true;
 }
 

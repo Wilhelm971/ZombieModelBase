@@ -5,7 +5,7 @@ AGridManager::AGridManager()
 {
     PrimaryActorTick.bCanEverTick = true;
     PrimaryActorTick.bStartWithTickEnabled = false;
-    CurrentCoins = 40;
+    CurrentCoins = 0;
 
     Grid.SetNum(GridSize * GridSize);
     for (int32 i = 0; i < Grid.Num(); ++i)

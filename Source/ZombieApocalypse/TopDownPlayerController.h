@@ -110,7 +110,7 @@ public:
 	float MaxZoom = 5000.0f;
 
 	/** Target arm length for smooth zooming interpolation. */
-	float TargetArmLength = 2500.0f;
+	float TargetArmLength = 1000.0f;
 
 
 	// WIDGET RELATED STUFF

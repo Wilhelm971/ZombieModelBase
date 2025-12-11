@@ -30,8 +30,19 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Functions")
 	void SetResources(int32 Value);
 
+	UFUNCTION(BlueprintCallable, Category = "Functions")
+	void SetMode(FText NewMode);
+
+protected:
+	// Configurable level to lead (set in BP)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Menu")
+	FName LevelToLoad = NAME_None;
+
 private:
 	virtual void NativeConstruct() override;
+
+	UFUNCTION()
+	void HandleRestartClicked();
 
 	UPROPERTY(meta = (BindWidget))
 	UTextBlock* Days;
@@ -47,4 +58,11 @@ private:
 
 	UPROPERTY(meta = (BindWidget))
 	UTextBlock* Resources;
+
+	UPROPERTY(meta = (bindWidget))
+	UTextBlock* ModeText;
+
+	UPROPERTY(meta = (bindWidget))
+	UButton* RestartButton;
+
 };
