@@ -1,6 +1,7 @@
 #include "ZombieManager.h"
 #include "Kismet/GameplayStatics.h"
 #include "Engine/World.h"
+#include "Math/UnrealMathUtility.h"
 
 AZombieManager::AZombieManager()
 {
@@ -43,9 +44,12 @@ void AZombieManager::SpawnInitialNPCs()
         }
     }
 
-    // Spawn zombie in center
-    int32 CenterX = 5;
-    int32 CenterY = 5;
+    // Spawn zombie in random 4 squares in center
+    int32 Random1 = FMath::RandRange(0, 1);
+    int32 Random2 = FMath::RandRange(0, 1);
+
+    int32 CenterX = 4 + Random1;
+    int32 CenterY = 4 + Random2;
     FVector ZombieSpawnPos = GridManager->GetCellCenterWorldPos(CenterX, CenterY);
     ANPC* Zombie = GetWorld()->SpawnActor<ANPC>(NPCClass, ZombieSpawnPos, FRotator::ZeroRotator, SpawnParams);
     if (Zombie)

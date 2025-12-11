@@ -123,6 +123,8 @@ public:
 private:
 	void CheckGameConditions();
 
+	int32 CalcScore();
+
 	bool bFinishedTurn = true;
 
 	// WIDGET STUFF
@@ -130,4 +132,6 @@ private:
 
 	UMainHUDWidget* MainHUD;
 	UEndGameWidget* EndGameWidget;
+
+	int32 Score;
 };

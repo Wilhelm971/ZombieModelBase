@@ -210,12 +210,13 @@ void ATopDownPlayerController::NextTurn()
 	}
 
 	// Step 3: Check Game Conditions
-	CheckGameConditions();
+	
 
 	GridManager->CurrentCoins += 5;
 
 	// Update HUD
 	UpdateHUD();
+	CheckGameConditions();
 
 	bFinishedTurn = true;
 }
@@ -236,7 +237,7 @@ void ATopDownPlayerController::CheckGameConditions()
 				EndGameWidget->AddToViewport();
 				this->SetPause(true);
 				EndGameWidget->SetText(FText::FromString(TEXT("Victory")));
-				EndGameWidget->SetScore(0); // calc the real score??
+				EndGameWidget->SetScore(CalcScore()); // calc the real score??
 			}
 		}
 
@@ -257,7 +258,7 @@ void ATopDownPlayerController::CheckGameConditions()
 				EndGameWidget->AddToViewport();
 				this->SetPause(true);
 				EndGameWidget->SetText(FText::FromString(TEXT("You're Trash")));
-				EndGameWidget->SetScore(0); // calc the real score??
+				EndGameWidget->SetScore(CalcScore()); // calc the real score??
 			}
 		}
 
@@ -266,6 +267,20 @@ void ATopDownPlayerController::CheckGameConditions()
 
 	// If no win/lose, continue (e.g., increment turn counter if you add one)
 	UE_LOG(LogTemp, Log, TEXT("Turn advanced. Press Spacebar for next."));
+}
+
+int32 ATopDownPlayerController::CalcScore()
+{
+	// find the stats
+	const int32 RemainingHumans = ZombieManager->GetSusceptibleCount();
+	const int32 RemainingGold = GridManager->CurrentCoins;
+
+	
+	// Calc point
+	const int32 TotalScore = (((RemainingGold / 12.5) + RemainingHumans) * 7); // *7 to get a cool score
+
+	UE_LOG(LogTemp, Log, TEXT("Humans: %d, Gold: %d = SCORE: %d"), (int32)RemainingHumans, (int32)RemainingGold, (int32)TotalScore);
+	return TotalScore;
 }
 
 void ATopDownPlayerController::UpdateHUD()
