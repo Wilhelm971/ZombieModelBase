@@ -212,7 +212,7 @@ void ATopDownPlayerController::NextTurn()
 	// Step 3: Check Game Conditions
 	CheckGameConditions();
 
-	GridManager->CurrentCoins += 10;
+	GridManager->CurrentCoins += 5;
 
 	// Update HUD
 	UpdateHUD();
