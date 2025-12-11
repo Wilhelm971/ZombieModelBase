@@ -185,7 +185,12 @@ void ATopDownPlayerController::ToggleBuildMode()
 
 void ATopDownPlayerController::NextTurn()
 {
-	if (bInBuildMode || bGameWon || bGameLost || !bFinishedTurn || ZombieManager->AreZombiesMoving()) return;  // Skip if building or game over
+	if (bGameWon || bGameLost || !bFinishedTurn || ZombieManager->AreZombiesMoving()) return;
+
+	if (bInBuildMode)
+	{
+		ToggleBuildMode();
+	}
 
 	bFinishedTurn = false;
 	
@@ -244,7 +249,7 @@ void ATopDownPlayerController::CheckGameConditions()
 		return;
 	}
 
-	if (SimulationController && SimulationController->Susceptible <= 0)
+	if (ZombieManager && ZombieManager->GetSusceptibleCount() <= 0)
 	{
 		bGameLost = true;
 		UE_LOG(LogTemp, Error, TEXT("LOSE! No humans left."));
@@ -258,7 +263,7 @@ void ATopDownPlayerController::CheckGameConditions()
 				EndGameWidget->AddToViewport();
 				this->SetPause(true);
 				EndGameWidget->SetText(FText::FromString(TEXT("You're Trash")));
-				EndGameWidget->SetScore(CalcScore()); // calc the real score??
+				EndGameWidget->SetScore(CalcScore()/2); // calc the real score??
 			}
 		}
 

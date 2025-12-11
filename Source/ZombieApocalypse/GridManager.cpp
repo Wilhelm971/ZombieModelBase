@@ -88,6 +88,7 @@ void AGridManager::EnterBuildMode()
     FencePreviewActor = GetWorld()->SpawnActor<AActor>(FencePreviewClass, FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
 
     // Enable tick for live preview
+    HidePreview();
     SetActorTickEnabled(true);
 }
 
